@@ -269,3 +269,28 @@ input::placeholder { color: #9caec3; }
 @media(max-width:650px) { .schedule-summary { grid-template-columns: repeat(3,1fr); }.schedule-summary .panel { padding: 10px; }.schedule-summary strong { font-size: 1rem; }.schedule-actions { width: 100%; }.schedule-actions select { width: 100%; }.mobile-day-select { display: flex; overflow-x: auto; gap: 6px; }.mobile-day-select button { flex: none; background: #edf5ff; border: 1px solid #d5e7fa; border-radius: 7px; padding: 8px; font-size: .72rem; }.mobile-day-select button[aria-pressed=true] { background: #2869cf; color: white; }.week-grid { display: block; overflow: visible; }.day-column { display: none; }.day-column.selected { display: block; }.shared-head { align-items: start; flex-direction: column; }.shared-days { grid-template-columns: 1fr; } }
 @media print { .sidebar,.mobile-nav,.topbar,.schedule-toolbar,.schedule-feedback,.undo-button,.shift-controls,.add-shift-button,.share-panel,.mobile-day-select,.shared-calendar header,.shared-head .week-controls { display:none !important; } body { background:#fff; color:#111; }.page-content,.shared-calendar { max-width:none; padding:0; }.week-grid { display:grid; grid-template-columns:repeat(7,1fr); overflow:visible; }.day-column { display:block !important; break-inside:avoid; }.shift-card { break-inside:avoid; }.shared-days { grid-template-columns:repeat(2,1fr); }.shared-shift { break-inside:avoid; } }
 @media print { @page { size: A4 landscape; margin: 12mm; } .page-head { display:none; } .print-title { display:block; font-size:16pt; font-weight:800; margin:0 0 12px; } }
+
+.theme-toggle { flex: none; min-height: 38px; border: 1px solid #cbdcf1; border-radius: 9px; background: #f3f8ff; color: #285b9f; padding: 7px 10px; font-size: .75rem; font-weight: 750; }
+.auth-brand-row, .shared-header-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.manual-rule-note { color: #607b9e; font-size: .76rem; line-height: 1.45; }
+
+.dark { --background: #101a2a; --foreground: #e9f1ff; --card: #1b2b40; --card-foreground: #e9f1ff; --popover: #1b2b40; --popover-foreground: #e9f1ff; --primary: #72a9ff; --primary-foreground: #101a2a; --secondary: #253a55; --secondary-foreground: #e9f1ff; --muted: #253a55; --muted-foreground: #b1c6e3; --border: #38506d; --input: #38506d; --ring: #9dc4ff; color-scheme: dark; }
+.dark body, .dark .app-shell { background: #101a2a; color: #e9f1ff; }
+.dark .sidebar, .dark .topbar, .dark .panel, .dark .day-column, .dark .mobile-nav, .dark .schedule-empty, .dark .auth-wrap { background: #1b2b40; border-color: #38506d; color: #e9f1ff; }
+.dark .workspace-chip, .dark .sidebar-plans, .dark .item-card, .dark .list-row, .dark .shift-card, .dark .availability-roster button, .dark .weekday-picker label, .dark .step, .dark .edit-employee { background: #22354d; border-color: #38506d; color: #e9f1ff; }
+.dark input:not([type=checkbox]), .dark select, .dark .theme-toggle, .dark .week-controls button, .dark .schedule-actions button:not(.primary-button), .dark .shift-controls button, .dark .share-panel button, .dark .add-shift-button { background: #263a55; border-color: #4b6789; color: #e9f1ff; }
+.dark .primary-button, .dark .schedule-actions .primary-button { background: #72a9ff; border-color: #72a9ff; color: #101a2a; }
+.dark .primary-button:hover { background: #9dc4ff; }
+.dark .nav-item, .dark label, .dark .weekday-picker legend, .dark .sidebar-plans h2, .dark .availability-roster button, .dark .brand, .dark .auth-intro h1 { color: #e9f1ff; }
+.dark .nav-item.active, .dark .availability-roster button.selected, .dark .weekday-picker label.selected, .dark .mobile-day-select button[aria-pressed=true] { background: #31527b; border-color: #72a9ff; color: #fff; }
+.dark .subtle, .dark .empty-hint, .dark .page-head p, .dark .sidebar-plans p, .dark .sidebar-plans .subtle, .dark .workspace-chip small, .dark .item-main small, .dark .list-row small, .dark .availability-roster button span, .dark .schedule-summary span, .dark .share-panel p, .dark .shared-calendar header, .dark .shared-shift time, .dark .manual-rule-note { color: #b1c6e3; }
+.dark .eyebrow, .dark .breadcrumb, .dark .count, .dark .day-column h3, .dark .shift-card-head span, .dark .schedule-feedback, .dark .schedule-summary strong, .dark .text-button, .dark .signout { color: #9dc4ff; }
+.dark .auth-intro { background: linear-gradient(145deg,#203a59,#102137); }
+.dark .auth-intro p { color: #c6d8f2; }
+.dark .auth-intro .intro-mark { color: #355779; }
+.dark .segmented, .dark .pilot-badge, .dark .mobile-day-select button, .dark .tag, .dark .role-pill, .dark .step-index, .dark .avatar, .dark .workspace-icon, .dark .user-avatar { background: #304d70; border-color: #4b6789; color: #dbeaff; }
+.dark .segmented button { color: #b1c6e3; }
+.dark .segmented button[aria-pressed=true] { background: #456a96; color: #fff; }
+.dark .shift-card.gap, .dark .notice.error { background: #432e38; border-color: #8b5661; color: #ffe0e0; }
+.dark .availability-editor, .dark .availability-table th, .dark .availability-table td, .dark .shared-shift { border-color: #38506d; }
+@media print { .dark body, .dark .panel, .dark .day-column, .dark .shift-card, .dark .shift-card.gap, .dark .shared-calendar { background: #fff !important; color: #111 !important; border-color: #bbb !important; box-shadow: none !important; }.dark .theme-toggle { display: none !important; } }

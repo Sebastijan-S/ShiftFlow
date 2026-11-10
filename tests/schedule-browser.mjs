@@ -37,6 +37,12 @@ try {
     return json({});
   });
   await page.goto(base,{waitUntil:'networkidle'});
+  await page.getByRole('button',{name:'Uključi tamni režim'}).click();
+  assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true);
+  await page.reload({waitUntil:'networkidle'});
+  assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'theme persists after reload');
+  await page.screenshot({path:'test-results/auth-dark-fixture-1440.png',fullPage:true});
+  await page.getByRole('button',{name:'Uključi svetli režim'}).click();
   await page.getByLabel('Email adresa').fill('fixture@example.invalid');
   await page.getByLabel('Lozinka').fill('fixture-password');
   await page.getByRole('button',{name:'Prijavi se'}).click();
@@ -112,5 +118,17 @@ try {
   assert.equal(await page.locator('.item-card').count(),10,'300-person team renders a manageable first page');
   assert.equal(await page.getByRole('button',{name:/Prikaži još/}).count(),1);
   await page.screenshot({path:'test-results/team-fixture-1440.png',fullPage:true});
+  await page.getByRole('button',{name:'Uključi tamni režim'}).click();
+  await page.screenshot({path:'test-results/team-dark-fixture-1440.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'dark mobile horizontal overflow');
+  await page.screenshot({path:'test-results/team-dark-fixture-390.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:900});
+  await page.getByRole('navigation',{name:'Glavna navigacija'}).getByRole('button',{name:'Raspored'}).click();
+  await page.getByLabel('Zameni').first().selectOption(employees[3].id);
+  await page.getByText('Sačuvana revizija 8').waitFor();
+  assert.equal(savedSlots[0].employee_id,employees[3].id,'manual change can select an inactive employee');
+  await page.getByRole('button',{name:'Objavi ažuriranje'}).click();
+  await page.getByText('Objavljena revizija 8').waitFor();
   console.log('PASS: Google Chrome fixture login, generation, replacement, queued revisions, publish, undo, cancel/restore shift, multi-day availability, 300-person team, desktop/mobile/settings/print layouts');
 } finally { await browser.close(); }

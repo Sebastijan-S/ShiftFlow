@@ -26,9 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="sr-Latn"
+      suppressHydrationWarning
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, robotoSlab.variable, publicSansHeading.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col"><script dangerouslySetInnerHTML={{__html:"try{if(localStorage.getItem('shiftflow-theme')==='dark'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark'}}catch{}"}} />{children}</body>
     </html>
   );
 }

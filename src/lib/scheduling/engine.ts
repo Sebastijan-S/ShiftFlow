@@ -94,7 +94,8 @@ export function violation(input: ScheduleInput, slot: Slot, employeeId: string, 
   return null;
 }
 
-export function validateSchedule(input: ScheduleInput, slots: Slot[]): Issue[] {
+export function validateSchedule(input: ScheduleInput, slots: Slot[], enforceRules = true): Issue[] {
+  if (!enforceRules) return [];
   const issues: Issue[] = [];
   for (const slot of slots) if (slot.employeeId) {
     const reason = violation(input, slot, slot.employeeId, slots);
@@ -109,7 +110,7 @@ export function replace(input: ScheduleInput, slots: Slot[], id: string, employe
   if (target.cancelled) throw new Error("Restore the shift before assigning an employee.");
   if (target.locked) throw new Error("Unlock this assignment first.");
   const next = slots.map((s) => s.id === id ? { ...s, employeeId } : s);
-  const issues = validateSchedule(input, next);
+  const issues = validateSchedule(input, next, false);
   if (issues.length) throw new Error(issues[0].reason);
   return next;
 }
@@ -119,7 +120,7 @@ export function swap(input: ScheduleInput, slots: Slot[], first: string, second:
   if (!a || !b || !a.employeeId || !b.employeeId || a.locked || b.locked) throw new Error("Both assignments must be filled and unlocked.");
   if (a.cancelled || b.cancelled) throw new Error("Restore the shift before swapping.");
   const next = slots.map((s) => s.id === first ? { ...s, employeeId: b.employeeId } : s.id === second ? { ...s, employeeId: a.employeeId } : s);
-  const issues = validateSchedule(input, next);
+  const issues = validateSchedule(input, next, false);
   if (issues.length) throw new Error(`${issues[0].slotId}: ${issues[0].reason}`);
   return next;
 }

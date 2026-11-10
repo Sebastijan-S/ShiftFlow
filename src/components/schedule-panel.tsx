@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import type { SetupData, Workspace } from "@/lib/types";
-import { expandDemand, replace, swap, validateSchedule, violation, type Result, type ScheduleInput, type Slot } from "@/lib/scheduling/engine";
+import { expandDemand, replace, swap, validateSchedule, type Result, type ScheduleInput, type Slot } from "@/lib/scheduling/engine";
 import { loadWeek, monday, moveWeek, publishWeek, saveWeek } from "@/lib/scheduling/data";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
@@ -83,7 +83,7 @@ export function SchedulePanel({ workspace, data, navigate }: Props) {
     if (!source?.employeeId || !target || source.locked || target.locked) throw new Error("Smene moraju biti otključane.");
     if (target.employeeId) return swap(input,slots,from,to);
     const next=slots.map((s) => s.id===from ? { ...s,employeeId:null } : s.id===to ? { ...s,employeeId:source.employeeId } : s);
-    const issues=validateSchedule(input,next); if (issues.length) throw new Error(issues[0].reason); return next;
+    const issues=validateSchedule(input,next,false); if (issues.length) throw new Error(issues[0].reason); return next;
   },"drag_move_or_swap");
   const publish = async () => {
     setWorking(true); setStatus("Objavljivanje…"); setError("");
@@ -126,7 +126,7 @@ export function SchedulePanel({ workspace, data, navigate }: Props) {
       <div className="shift-controls">
         <label>Zameni<select disabled={generating || !!pending || slot.locked} value={slot.employeeId ?? ""} onChange={(event) => change((all) => replace(input, all, slot.id, event.target.value || null), "replace")}>
           <option value="">Nepokriveno</option>
-          {data.employees.filter((person) => person.active).map((person) => { const why = violation(input, slot, person.id, slots); return <option key={person.id} value={person.id} disabled={!!why && person.id !== slot.employeeId}>{person.display_name}{why && person.id !== slot.employeeId ? ` — ${why}` : ""}</option>; })}
+          {data.employees.map((person) => <option key={person.id} value={person.id}>{person.display_name}{person.active ? "" : " — neaktivan"}</option>)}
         </select></label>
         <label>Zameni mesta<select disabled={generating || !!pending || slot.locked || !slot.employeeId} value="" onChange={(event) => { if (event.target.value) change((all) => swap(input, all, slot.id, event.target.value), "swap"); }}>
           <option value="">Izaberi smenu</option>{activeSlots.filter((item) => item.id !== slot.id && item.employeeId && !item.locked).map((item) => <option key={item.id} value={item.id}>{dayLabel(item.localDate)} {timeLabel(item.start, workspace.timezone)} · {data.employees.find((person) => person.id === item.employeeId)?.display_name}</option>)}
@@ -139,7 +139,7 @@ export function SchedulePanel({ workspace, data, navigate }: Props) {
   return <div className="schedule-workspace">
     <div className="schedule-toolbar panel"><div className="week-controls"><button type="button" onClick={() => goWeek(-1)} aria-label="Prethodna nedelja">←</button><strong>{dayLabel(week)} – {dayLabel(dates[6])}</strong><button type="button" onClick={() => goWeek(1)} aria-label="Sledeća nedelja">→</button></div><div className="schedule-actions"><select aria-label="Filter uloga" value={role} onChange={(e)=>setRole(e.target.value)}><option value="">Sve uloge</option>{data.roles.map((r)=><option key={r.id} value={r.id}>{r.name}</option>)}</select><button className="primary-button" disabled={working || !!pending} onClick={generateWeek}>Generiši</button>{generating && <button onClick={cancel}>Otkaži</button>}<button disabled={working || !!pending || !state.revision || coverage!==activeSlots.length} onClick={() => void publish()}>Objavi ažuriranje</button><button onClick={() => window.print()}>Štampaj / PDF</button></div></div>
     <div className="schedule-summary"><div className="panel"><strong>{coverage} / {activeSlots.length}</strong><span>Pokrivenost</span></div><div className="panel"><strong>{assignedHours.toFixed(1)} h</strong><span>Dodeljeni sati</span></div><div className="panel"><strong>{state.publishedRevision ?? "—"}</strong><span>Objavljena revizija</span></div></div>
-    <div className="schedule-feedback" aria-live="polite">{status}{progress>0 && generating ? ` (${progress} koraka)` : ""}</div>{error && <div className="notice error" role="alert">{error} {pending && <button disabled={working} onClick={() => void drain()}>Pokušaj ponovo</button>} <button onClick={() => void refresh()}>Učitaj sa servera</button></div>}
+    <div className="schedule-feedback" aria-live="polite">{status}{progress>0 && generating ? ` (${progress} koraka)` : ""}</div><p className="manual-rule-note">Ručne izmene mogu da zaobiđu dostupnost, odmor, preklapanje i ograničenja sati. Generator i dalje poštuje ta pravila.</p>{error && <div className="notice error" role="alert">{error} {pending && <button disabled={working} onClick={() => void drain()}>Pokušaj ponovo</button>} <button onClick={() => void refresh()}>Učitaj sa servera</button></div>}
     {result && result.issues.length>0 && <div className="notice error" role="status">{result.status==="limit" ? "Pretraga je dostigla granicu; nepokrivenost nije dokaz neizvodljivosti." : "Nepotpuna pokrivenost."} {result.issues.length} mesta bez dodele. {result.issues.slice(0,3).map((i)=>i.reason).join("; ")}</div>}
     {undo && <button className="text-button undo-button" disabled={working} onClick={() => { const previous=state.slots; void commit(undo,"undo",previous); setUndo(null); }}>Poništi poslednju izmenu</button>}
     <div className="mobile-day-select" role="group" aria-label="Dan u nedelji">{dates.map((d,i)=><button key={d} aria-pressed={day===i} onClick={()=>setDay(i)}>{dayLabel(d)}</button>)}</div>

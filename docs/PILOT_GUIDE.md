@@ -13,11 +13,11 @@ Support/feedback route: reply to the pilot invitation using the template below. 
 
 1. Sign up with email OR phone number and a password. No confirmation email/SMS step is required during the pilot. Phone entry needs a country code.
 2. Set the business name, timezone, roles, shifts and staffing requirements.
-3. Add employees, target hours and shift preferences. Roles are job labels; active employees can work under any label when availability and work rules allow it.
+3. Add employees, target hours and shift preferences. Roles are job labels. Generate follows availability and work rules; a manager can override scheduling rules with a manual change.
 4. Enter regular availability, then date-specific whole-day/partial-day unavailability.
 5. Select a week and click Generate. Check coverage, hours and any reported problems. A normal feasible week should not need manual cleanup.
 6. Mark an employee unavailable for a shift and use Replace or drag to make a change. Verify that the time/date stays the same.
-7. Try a two-way swap. Check whether an invalid move is rejected with an explanation.
+7. Try a two-way swap. Manual changes can override availability, overlap, rest and hour rules, but still preserve the shift date/time and must use employees from the same business.
 8. Publish the week and open the team link in a signed-out browser. Confirm that it shows only the published calendar.
 9. Change the draft, verify the shared calendar is unchanged, then Publish update and refresh the same link.
 10. Reload, sign out/in, and confirm the saved schedule remains. Try mobile viewing and print/PDF.

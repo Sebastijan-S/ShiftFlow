@@ -14,6 +14,12 @@ try {
     await page.getByText('Za ovu nedelju nema objavljenog rasporeda.').waitFor();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);
     await page.screenshot({path:`test-results/team-empty-${width}.png`,fullPage:true});
+    if (width===390) {
+      await page.getByRole('button',{name:'Uključi tamni režim'}).click();
+      await page.reload({waitUntil:'networkidle'});
+      assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'shared theme persists');
+      await page.screenshot({path:'test-results/team-empty-dark-390.png',fullPage:true});
+    }
     await page.getByRole('button',{name:'Sledeća nedelja'}).click();
     await page.getByText('Za ovu nedelju nema objavljenog rasporeda.').waitFor();
     await page.close();

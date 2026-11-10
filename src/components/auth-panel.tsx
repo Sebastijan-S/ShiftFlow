@@ -4,6 +4,7 @@ import { useState } from "react";
 import { getCountries, getCountryCallingCode, type CountryCode } from "libphonenumber-js";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { normalizePhone } from "@/lib/phone";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const regionNames = new Intl.DisplayNames(["sr-Latn", "en"], { type: "region" });
 const countries = getCountries().map((code) => ({ code, label: `${regionNames.of(code) ?? code} (+${getCountryCallingCode(code)})` })).sort((a, b) => a.label.localeCompare(b.label, "sr-Latn"));
@@ -42,7 +43,7 @@ export function AuthPanel() {
   }
 
   return <main className="auth-wrap"><section className="auth-intro"><span className="eyebrow">SHIFT FLOW / PILOT</span><h1>Raspored počinje dobrim podacima.</h1><p>Unesite tim, dostupnost i potrebne smene. Generišite pouzdan raspored i podelite objavljene smene sa timom.</p><div className="intro-mark">SF<span>✳</span></div></section>
-    <section className="auth-card"><div className="brand">✳ ShiftFlow</div><h2>{mode === "login" ? "Dobro došli nazad" : "Napravite nalog"}</h2><p className="subtle">{mode === "login" ? "Prijavite se u svoj poslovni prostor." : "Započnite besplatan pilot za svoj tim."}</p>
+    <section className="auth-card"><div className="auth-brand-row"><div className="brand">✳ ShiftFlow</div><ThemeToggle /></div><h2>{mode === "login" ? "Dobro došli nazad" : "Napravite nalog"}</h2><p className="subtle">{mode === "login" ? "Prijavite se u svoj poslovni prostor." : "Započnite besplatan pilot za svoj tim."}</p>
       <div className="segmented" role="group" aria-label="Način prijave"><button type="button" aria-pressed={kind === "email"} onClick={() => setKind("email")}>Email</button><button type="button" aria-pressed={kind === "phone"} onClick={() => setKind("phone")}>Telefon</button></div>
       <form onSubmit={submit} className="form-stack">{kind === "phone" && <label>Država<select value={country} onChange={(e) => setCountry(e.target.value as CountryCode)}>{countries.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>}
         <label>{kind === "email" ? "Email adresa" : "Broj telefona"}<input required type={kind === "email" ? "email" : "tel"} autoComplete={kind === "email" ? "email" : "tel"} value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder={kind === "email" ? "ime@firma.com" : "064 123 4567"} /></label>
