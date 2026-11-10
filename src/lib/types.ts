@@ -1,4 +1,4 @@
-export type Workspace = { id: string; owner_user_id: string; name: string; timezone: string };
+export type Workspace = { id: string; owner_user_id: string; name: string; timezone: string; setup_revision: number };
 export type Role = { id: string; workspace_id: string; name: string };
 export type Employee = { id: string; workspace_id: string; display_name: string; active: boolean; target_hours: number; preference: "none" | "early" | "late" };
 export type EmployeeRole = { workspace_id: string; employee_id: string; role_id: string };

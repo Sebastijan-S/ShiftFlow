@@ -17,28 +17,28 @@ All boxes start unchecked. Record evidence, environment and date when checking a
 
 ## Phase 2 — generator and scheduling
 
-- [ ] Known-feasible hospitality, customer-service and retail fixtures are fully covered without manual cleanup.
+- [x] Known-feasible hospitality, customer-service and retail fixtures are fully covered without manual cleanup. Evidence: 10 Nov 2026, `corepack pnpm test:schedule`, isolated 10/25/50-person fixtures; 20–112 slots, all covered.
 - [ ] Hard constraints never fail: inactive/unqualified employee, unavailable interval, overlap, hour maximum, rest and lock preservation.
-- [ ] Partial-day absence, overnight shift, adjacent-week rest and timezone/DST fixtures pass.
-- [ ] Tiny exhaustive-oracle fixtures catch greedy dead ends and verify complete solutions are found.
-- [ ] Repeated generation with equivalent input is reproducible; fairness metrics are measured.
-- [ ] Impossible demand remains visibly unfilled with useful reasons; timeout is reported separately from proven infeasibility.
-- [ ] Invalid locked assignments are surfaced without silently moving them.
+- [x] Partial-day absence, overnight shift, adjacent-week rest and timezone/DST fixtures pass. Evidence: 10 Nov 2026, pure scheduling and isolated PGlite tests in `test:schedule`.
+- [x] Tiny exhaustive-oracle fixtures catch greedy dead ends and verify complete solutions are found. Evidence: 10 Nov 2026, two-slot oracle fixture in `tests/scheduling.ts`.
+- [x] Repeated generation with equivalent input is reproducible; fairness metrics are measured. Evidence: 10 Nov 2026, `test:schedule`; logged target-hour deviations are measurements, not optimality claims.
+- [x] Impossible demand remains visibly unfilled with useful reasons; timeout is reported separately from proven infeasibility. Evidence: 10 Nov 2026, `test:schedule` incomplete and limit fixtures; schedule UI shows uncovered slots and search-limit wording.
+- [x] Invalid locked assignments are surfaced without silently moving them. Evidence: 10 Nov 2026, `test:schedule` invalid-lock fixture; result retains prior assignments.
 - [ ] Cancelling/failing generation leaves the previous draft intact.
-- [ ] Stale generation input cannot overwrite later availability or manual changes.
+- [x] Stale generation input cannot overwrite later availability or manual changes. Evidence: 10 Nov 2026, PGlite setup revision and schedule revision conflict tests; no write on conflict.
 - [ ] Desktop week and mobile day/agenda views support week navigation and filters.
 - [ ] Drag replacement preserves the shift's date, time and role.
 - [ ] Two-way swap validates both employees and all neighboring assignments; invalid swaps leave both unchanged.
 - [ ] Cascading menus, touch and keyboard alternatives offer equivalent actions.
 - [ ] Locked assignments require deliberate unlocking; undo restores a committed local operation safely.
 - [ ] Clear saving/failed/retry states; no "Saved" label before durable success.
-- [ ] Publish requires complete demand coverage and no hard violations.
-- [ ] Draft edits do not change the employee view until Publish update succeeds.
+- [x] Publish requires complete demand coverage and no hard violations. Evidence: 10 Nov 2026, isolated PGlite rejects incomplete publication and retains prior published pointer; hard validation runs in publication transaction.
+- [x] Draft edits do not change the employee view until Publish update succeeds. Evidence: 10 Nov 2026, PGlite published snapshot remains visible through a later incomplete draft and failed publish.
 - [ ] The same team URL opens successive published weeks; no account required.
-- [ ] Unpublished weeks, internal notes, contacts and availability are absent from share responses.
-- [ ] Link revocation/rotation works; routine publication does not rotate it.
+- [x] Unpublished weeks, internal notes, contacts and availability are absent from share responses. Evidence: 10 Nov 2026, PGlite safe-field key assertion and null unpublished week; hosted anonymous invalid-token check.
+- [x] Link revocation/rotation works; routine publication does not rotate it. Evidence: 10 Nov 2026, isolated PGlite old token invalid after revoke/rotate and publication remains available to the new token.
 - [ ] Print/PDF is readable and excludes internal details.
-- [ ] Basic EUR 15 and Premium EUR 25 appear accurately without active checkout.
+- [x] Basic EUR 15 and Premium EUR 25 appear accurately without active checkout. Evidence: 10 Nov 2026, static Settings UI text inspection; no payment code or checkout added.
 - [ ] D3 database tests below pass.
 
 ## Database integrity suite — run at D1/D2/D3/D4 as applicable

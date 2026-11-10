@@ -8,7 +8,7 @@ import { WorkspaceCreate } from "@/components/workspace-create";
 import { TeamPanel } from "@/components/team-panel";
 import { AvailabilityPanel } from "@/components/availability-panel";
 import { SettingsPanel } from "@/components/settings-panel";
-import { ScheduleEmpty } from "@/components/schedule-empty";
+import { SchedulePanel } from "@/components/schedule-panel";
 import { loadSetup } from "@/lib/setup-data";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import type { SetupData, Workspace } from "@/lib/types";
@@ -65,9 +65,9 @@ export default function Home() {
   if (!workspace && error) return <main className="setup-wrap"><div className="notice error" role="alert">{error} <button onClick={refresh}>Pokušaj ponovo</button></div></main>;
   if (!workspace) return <WorkspaceCreate userId={user.id} onCreated={refresh} />;
   return <div className="app-shell"><aside className="sidebar"><div className="brand">✳ ShiftFlow</div><div className="workspace-chip"><span className="workspace-icon">{workspace.name.slice(0, 1).toUpperCase()}</span><span><strong>{workspace.name}</strong><small>Poslovni prostor</small></span></div><nav aria-label="Glavna navigacija">{menu.map((item) => <button key={item.id} className={`nav-item ${view === item.id ? "active" : ""}`} onClick={() => { setView(item.id); setSaved(""); }}>{item.icon}<span>{item.label}</span></button>)}</nav><div className="sidebar-bottom"><span className="pilot-badge">✦ Besplatan pilot</span><button className="signout" onClick={() => void supabaseBrowser().auth.signOut()}>Odjavi se ↗</button></div></aside>
-    <div className="main-column"><header className="topbar"><div><span className="breadcrumb">SHIFT FLOW / {workspace.name.toUpperCase()}</span><h1>{menu.find((item) => item.id === view)?.label}</h1></div><div className="topbar-right"><span className="timezone">◷ {workspace.timezone}</span><span className="user-avatar">{(user.email ?? user.phone ?? "U").slice(0, 1).toUpperCase()}</span></div></header><main className="page-content"><div className="page-head"><div><span className="eyebrow">{view === "schedule" ? "PREGLED" : "PODEŠAVANJE"}</span><p>{view === "schedule" ? "Vaš poslovni prostor je spreman za unos podataka." : view === "team" ? "Ko radi u timu i koje uloge može da obavlja." : view === "availability" ? "Kada su članovi tima dostupni i kada nisu." : "Smene, potrebna pokrivenost i pravila rasporeda."}</p></div><div className="status" aria-live="polite">{busy ? "Čuvanje…" : saved}</div></div>
+    <div className="main-column"><header className="topbar"><div><span className="breadcrumb">SHIFT FLOW / {workspace.name.toUpperCase()}</span><h1>{menu.find((item) => item.id === view)?.label}</h1></div><div className="topbar-right"><span className="timezone">◷ {workspace.timezone}</span><span className="user-avatar">{(user.email ?? user.phone ?? "U").slice(0, 1).toUpperCase()}</span></div></header><main className="page-content"><div className="page-head"><div><span className="eyebrow">{view === "schedule" ? "PREGLED" : "PODEŠAVANJE"}</span><p>{view === "schedule" ? "Generišite, uredite i objavite nedeljni raspored." : view === "team" ? "Ko radi u timu i koje uloge može da obavlja." : view === "availability" ? "Kada su članovi tima dostupni i kada nisu." : "Smene, potrebna pokrivenost i pravila rasporeda."}</p></div><div className="status" aria-live="polite">{busy ? "Čuvanje…" : saved}</div></div>
       {error && <div className="notice error" role="alert">{error} <button onClick={refresh}>Pokušaj ponovo</button></div>}
-      {view === "schedule" && <ScheduleEmpty data={data} navigate={setView} />}
+      {view === "schedule" && <SchedulePanel workspace={workspace} data={data} navigate={setView} />}
       {view === "team" && <TeamPanel workspaceId={workspace.id} data={data} run={run} />}
       {view === "availability" && <AvailabilityPanel workspaceId={workspace.id} data={data} run={run} />}
       {view === "settings" && <SettingsPanel workspace={workspace} data={data} run={run} />}

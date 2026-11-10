@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ShiftFlow | Planiranje smena",
-  description: "Pripremite tim i dostupnost za pouzdan raspored smena.",
+  description: "Planirajte smene, menjajte dodele i delite objavljen raspored sa timom.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

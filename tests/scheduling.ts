@@ -1,0 +1,89 @@
+import assert from "node:assert/strict";
+import { expandDemand, generate, replace, swap, validateSchedule, violation, type ScheduleInput } from "../src/lib/scheduling/engine";
+import type { SetupData } from "../src/lib/types";
+
+function fixture(kind: "hospitality" | "service" | "retail", count: number): ScheduleInput {
+  const roles = [{ id: "front", workspace_id: "test", name: "Front" }, { id: "support", workspace_id: "test", name: "Support" }];
+  const employees = Array.from({ length: count }, (_, i) => ({ id: `e${i}`, workspace_id: "test", display_name: `Employee ${i}`, active: true, target_hours: kind === "retail" ? 24 : 32, preference: "none" as const }));
+  const shifts = [{ id: "early", workspace_id: "test", name: "Early", start_time: "08:00:00", end_time: "14:00:00" }, { id: "late", workspace_id: "test", name: "Late", start_time: "15:00:00", end_time: "21:00:00" }];
+  const weekdays = kind === "service" ? [1,2,3,4,5] : [0,1,2,3,4,5,6];
+  const requirements = weekdays.flatMap((weekday) => roles.flatMap((role) => shifts.map((shift) => ({ id: `${kind}-${weekday}-${role.id}-${shift.id}`, workspace_id: "test", role_id: role.id, shift_template_id: shift.id, weekday, local_date: null, required_count: count === 10 ? 1 : count === 25 ? 2 : 4 }))));
+  const windows = employees.flatMap((employee) => Array.from({ length: 7 }, (_, weekday) => ({ id: `${employee.id}-${weekday}`, workspace_id: "test", employee_id: employee.id, weekday, start_time: "07:00:00", end_time: "22:00:00" })));
+  const setup: SetupData = { roles, employees, shifts, windows, requirements, employeeRoles: employees.flatMap((e) => roles.map((r) => ({ workspace_id: "test", employee_id: e.id, role_id: r.id }))), exceptions: [], rules: { workspace_id: "test", max_weekly_hours: 48, max_daily_hours: 12, min_rest_hours: 11 } };
+  return { weekStart: "2026-11-09", timezone: "Europe/Belgrade", setup, adjacent: [], existing: [] };
+}
+
+for (const kind of ["hospitality","service","retail"] as const) for (const count of [10,25,50]) {
+  const input = fixture(kind,count);
+  const result = generate(input,{maxNodes:5000});
+  assert.equal(result.status,"complete",`${kind}/${count}: ${result.status} ${result.issues.length} gaps`);
+  assert.deepEqual(validateSchedule(input,result.slots),[]);
+  assert.deepEqual(generate(input,{maxNodes:5000}).slots,result.slots,"reproducible generation");
+  console.log(`${kind}/${count}: ${result.slots.length} slots, ${result.elapsedMs.toFixed(0)}ms, deviation ${result.targetDeviation.toFixed(1)}h`);
+}
+const input=fixture("service",10);
+const slots=expandDemand(input);
+const first=slots[0];
+input.setup.exceptions.push({id:"partial",workspace_id:"test",employee_id:"e0",local_date:first.localDate,start_time:"10:00:00",end_time:"11:00:00",reason:null});
+assert.match(String(generate(input,{maxNodes:5000}).status),/complete/);
+assert.throws(() => replace(input,slots,first.id,"e0"),/unavailable/);
+const filled=generate(input,{maxNodes:5000}).slots;
+const a=filled[0], b=filled.find((s) => s.employeeId !== a.employeeId && s.start === a.start);
+assert.ok(b);
+const before=structuredClone(filled);
+try { const changed=swap(input,filled,a.id,b.id); assert.deepEqual(validateSchedule(input,changed),[]); } catch (error) { assert.match(String(error),/rest|overlap|limit|unavailable/); }
+assert.deepEqual(filled,before,"swap is atomic in memory");
+const locked={...filled[0],locked:true};
+assert.throws(() => replace(input,[locked,...filled.slice(1)],locked.id,"e1"),/Unlock/);
+const invalid=generate({...input,existing:[{...locked,employeeId:"missing"}]});
+assert.equal(invalid.status,"invalid");
+assert.deepEqual(invalid.slots,[{...locked,employeeId:"missing"}]);
+const cancelled=generate(input,{signal:AbortSignal.abort()});
+assert.equal(cancelled.status,"cancelled");
+const hard=fixture("service",10); const hardSlot=expandDemand(hard)[0];
+assert.equal(violation(hard,hardSlot,"missing",[]),"inactive or missing employee");
+hard.setup.employees[0].active=false;
+assert.equal(violation(hard,hardSlot,"e0",[]),"inactive or missing employee");
+hard.setup.employees[0].active=true;
+hard.setup.employeeRoles=hard.setup.employeeRoles.filter((r)=>r.employee_id!=="e0");
+assert.equal(violation(hard,hardSlot,"e0",[]),"role not eligible");
+hard.setup.employeeRoles.push({workspace_id:"test",employee_id:"e0",role_id:hardSlot.roleId});
+assert.equal(violation(hard,hardSlot,"e0",[{...hardSlot,id:"overlap",employeeId:"e0"}]),"overlap");
+hard.setup.rules!.max_daily_hours=5;
+assert.equal(violation(hard,hardSlot,"e0",[]),"daily hour limit");
+hard.setup.rules!.max_daily_hours=12; hard.setup.rules!.max_weekly_hours=5;
+assert.equal(violation(hard,hardSlot,"e0",[]),"weekly hour limit");
+hard.setup.rules!.max_weekly_hours=48; hard.setup.rules!.min_rest_hours=0;
+assert.equal(violation(hard,hardSlot,"e0",[{...hardSlot,id:"touching",start:hardSlot.end,end:hardSlot.end+3600000,employeeId:"e0"}]),null,"half-open endpoint allowed");
+// A two-slot exhaustive oracle catches a greedy dead end: the second slot has one candidate.
+const oracleInput=fixture("service",10);
+oracleInput.setup.requirements=oracleInput.setup.requirements.filter((r)=>r.weekday===1 && r.role_id==="front");
+oracleInput.setup.shifts=[{id:"early",workspace_id:"test",name:"Early",start_time:"08:00:00",end_time:"14:00:00"},{id:"late",workspace_id:"test",name:"Late",start_time:"15:00:00",end_time:"21:00:00"}];
+oracleInput.setup.employeeRoles=oracleInput.setup.employeeRoles.filter((r)=>["e0","e1"].includes(r.employee_id));
+oracleInput.setup.windows=oracleInput.setup.windows.filter((w)=>["e0","e1"].includes(w.employee_id));
+oracleInput.setup.exceptions.push({id:"restrict",workspace_id:"test",employee_id:"e1",local_date:"2026-11-09",start_time:"15:00:00",end_time:"21:00:00",reason:null});
+const tiny=expandDemand(oracleInput);
+const exhaustive=(model:ScheduleInput, demand:typeof tiny, index:number, assigned:typeof tiny):boolean=>index===demand.length || model.setup.employees.some((employee)=>!violation(model,demand[index],employee.id,assigned) && exhaustive(model,demand,index+1,[...assigned,{...demand[index],employeeId:employee.id}]));
+assert.equal(exhaustive(oracleInput,tiny,0,[]),true);
+assert.equal(generate(oracleInput,{maxNodes:100}).status,"complete");
+const impossible=structuredClone(oracleInput);
+impossible.setup.employeeRoles=impossible.setup.employeeRoles.filter((r)=>r.employee_id==="e0");
+assert.equal(exhaustive(impossible,expandDemand(impossible),0,[]),false);
+const incomplete=generate(impossible,{maxNodes:5000});
+assert.equal(incomplete.status,"incomplete");
+assert.ok(incomplete.issues.length>0);
+assert.equal(generate(impossible,{maxNodes:1}).status,"limit");
+const overnight=fixture("service",10);
+overnight.setup.requirements=[{...overnight.setup.requirements[0],id:"night-demand",weekday:1,shift_template_id:"night"}];
+overnight.setup.shifts=[{id:"night",workspace_id:"test",name:"Night",start_time:"22:00:00",end_time:"06:00:00"}];
+overnight.setup.employeeRoles=overnight.setup.employeeRoles.filter((r)=>r.employee_id==="e0");
+overnight.setup.windows=[{id:"monday",workspace_id:"test",employee_id:"e0",weekday:1,start_time:"21:00:00",end_time:"24:00:00"},{id:"tuesday",workspace_id:"test",employee_id:"e0",weekday:2,start_time:"00:00:00",end_time:"07:00:00"}];
+const night=expandDemand(overnight)[0];
+assert.equal(violation(overnight,night,"e0",[]),null);
+overnight.adjacent=[{...night,id:"prior",start:night.start-8*3600000,end:night.start-2*3600000,employeeId:"e0"}];
+assert.equal(violation(overnight,night,"e0",[]),"minimum rest");
+const spring=fixture("service",10); spring.weekStart="2026-03-23"; spring.setup.requirements=[{...spring.setup.requirements[0],id:"spring",weekday:0,shift_template_id:"dst"}]; spring.setup.shifts=[{id:"dst",workspace_id:"test",name:"DST",start_time:"02:30:00",end_time:"04:00:00"}];
+assert.throws(()=>expandDemand(spring),/multiple instants|no such instant|ambiguous/i);
+const autumn={...spring,weekStart:"2026-10-19"};
+assert.throws(()=>expandDemand(autumn),/multiple instants|no such instant|ambiguous/i);
+console.log("PASS: constraints, partial absence, swap, locks, cancel and reproducibility");

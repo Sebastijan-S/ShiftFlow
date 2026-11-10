@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const env=Object.fromEntries(readFileSync('.env.local','utf8').split(/\r?\n/).filter((l)=>l && !l.startsWith('#')).map((l)=>{const at=l.indexOf('=');return [l.slice(0,at),l.slice(at+1).replace(/^"|"$/g,'')]}));
+const url=env.NEXT_PUBLIC_SUPABASE_URL, key=env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+assert.ok(url && key);
+const headers={apikey:key,'Content-Type':'application/json'};
+const privateRead=await fetch(`${url}/rest/v1/assignments?select=id`,{headers});
+if (privateRead.status===200) assert.deepEqual(await privateRead.json(),[],"anonymous assignments must be empty");
+else assert.ok([401,403].includes(privateRead.status),`anonymous assignment access ${privateRead.status}`);
+const privateWrite=await fetch(`${url}/rest/v1/rpc/save_schedule`,{method:'POST',headers,body:JSON.stringify({p_workspace:'00000000-0000-4000-8000-000000000000',p_week_start:'2026-11-09',p_expected_revision:0,p_expected_setup_revision:0,p_operation_id:'00000000-0000-4000-8000-000000000000',p_operation:'test',p_slots:[]})});
+assert.ok([401,403,404].includes(privateWrite.status),`anonymous schedule write ${privateWrite.status}`);
+const shared=await fetch(`${url}/rest/v1/rpc/read_team_week`,{method:'POST',headers,body:JSON.stringify({p_token:'0'.repeat(64),p_week_start:'2026-11-09'})});
+assert.equal(shared.status,200);
+assert.equal(await shared.json(),null);
+console.log('PASS: hosted anonymous business rows hidden, save RPC denied, shared RPC returns no week for invalid token');

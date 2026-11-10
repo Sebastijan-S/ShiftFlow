@@ -9,11 +9,16 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:schema": "node tests/schema.mjs",
+    "test:schedule": "tsx tests/scheduling.ts && node tests/schedule-db.mjs",
+    "test:hosted-anon": "node tests/hosted-anon.mjs",
+    "test:shared-browser": "node tests/shared-browser.mjs",
+    "test:schedule-browser": "node tests/schedule-browser.mjs",
     "test:phone": "node tests/phone.mjs",
     "test:browser": "node tests/browser.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
+    "@js-temporal/polyfill": "0.5.1",
     "@phosphor-icons/react": "2.1.10",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.119.0",
@@ -35,6 +40,7 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "4.3.5",
+    "tsx": "4.20.6",
     "typescript": "5.9.3"
   },
   "packageManager": "pnpm@12.18.0"

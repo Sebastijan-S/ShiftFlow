@@ -1,14 +1,14 @@
-# NewShiftFlow — pilot planning pack
+# NewShiftFlow — pilot application
 
-Status: Phase 1 foundation implemented. Real account and saved setup round trips remain unverified; the user deferred pilot Auth settings and real signup checks until the final review. Updated 10 November 2026.
+Status: Phase 2 code and hosted schema implemented; the Phase 2 acceptance gate remains open pending real Auth and hosted manager round trips. The user deferred provider settings and signup verification until final review. Updated 10 November 2026.
 
 ## Local development
 
 Use Node 24 and pnpm 12.18.0 (`corepack pnpm` if pnpm is not on PATH). Copy `.env.local.example` to `.env.local`, set the project's publishable key, then run `corepack pnpm install --frozen-lockfile` and `corepack pnpm exec next dev --port 3001`. Open `http://localhost:3001` in Google Chrome. Port 3000 may serve the old read-only project on this machine. The local `.env.local` is ignored by Git.
 
-Run `corepack pnpm typecheck`, `corepack pnpm lint`, `corepack pnpm build`, `corepack pnpm test:schema`, and `corepack pnpm test:phone`. With the dev server running, `corepack pnpm test:browser` uses the installed Google Chrome executable.
+Run `corepack pnpm typecheck`, `corepack pnpm lint`, `corepack pnpm build`, `corepack pnpm test:schema`, `corepack pnpm test:phone`, `corepack pnpm test:schedule`, and `corepack pnpm test:hosted-anon`. With the dev server running, `corepack pnpm test:browser`, `corepack pnpm test:schedule-browser`, and `corepack pnpm test:shared-browser` use the installed Google Chrome executable. The schedule browser test uses isolated network fixtures; it does not prove live Auth behavior.
 
-See [Phase 1 status](docs/PHASE1_STATUS.md) for verified behavior and the remaining Auth setting dependency. The hosted schema is managed by [versioned migrations](supabase/migrations/).
+See [Phase 2 status](docs/PHASE2_STATUS.md) and [Phase 1 status](docs/PHASE1_STATUS.md) for verified behavior and deferred checks. The hosted schema is managed by [versioned migrations](supabase/migrations/).
 
 Build a reliable shift scheduler for businesses with shift-based teams. The core promise is: enter staffing needs and who cannot work when, click Generate, and receive a usable schedule. Manual changes handle exceptions.
 
@@ -55,4 +55,4 @@ If a previous phase is incomplete, finish or explain the dependency before start
 
 ## Boundaries
 
-The original planning step created only documents and reference images. Phase 1 has since scaffolded the application and applied two database migrations. Auth settings remain unchanged; no code has been pushed or deployed. Deployment provider, public domain, final Premium entitlements, and tax display remain launch/business decisions.
+Phase 1 source was published to GitHub `main` at `f7b3e5b`. Phase 2 has added three hosted schema migrations; Auth settings remain unchanged. Phase 2 has not been pushed or deployed. Deployment provider, public domain, final Premium entitlements, and tax display remain launch/business decisions.

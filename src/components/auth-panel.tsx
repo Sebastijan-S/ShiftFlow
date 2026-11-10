@@ -41,7 +41,7 @@ export function AuthPanel() {
     } finally { setBusy(false); }
   }
 
-  return <main className="auth-wrap"><section className="auth-intro"><span className="eyebrow">SHIFT FLOW / PILOT</span><h1>Raspored počinje dobrim podacima.</h1><p>Unesite tim, dostupnost i potrebne smene. Sledeća faza donosi automatsko planiranje.</p><div className="intro-mark">SF<span>✳</span></div></section>
+  return <main className="auth-wrap"><section className="auth-intro"><span className="eyebrow">SHIFT FLOW / PILOT</span><h1>Raspored počinje dobrim podacima.</h1><p>Unesite tim, dostupnost i potrebne smene. Generišite pouzdan raspored i podelite objavljene smene sa timom.</p><div className="intro-mark">SF<span>✳</span></div></section>
     <section className="auth-card"><div className="brand">✳ ShiftFlow</div><h2>{mode === "login" ? "Dobro došli nazad" : "Napravite nalog"}</h2><p className="subtle">{mode === "login" ? "Prijavite se u svoj poslovni prostor." : "Započnite besplatan pilot za svoj tim."}</p>
       <div className="segmented" role="group" aria-label="Način prijave"><button type="button" aria-pressed={kind === "email"} onClick={() => setKind("email")}>Email</button><button type="button" aria-pressed={kind === "phone"} onClick={() => setKind("phone")}>Telefon</button></div>
       <form onSubmit={submit} className="form-stack">{kind === "phone" && <label>Država<select value={country} onChange={(e) => setCountry(e.target.value as CountryCode)}>{countries.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}</select></label>}
