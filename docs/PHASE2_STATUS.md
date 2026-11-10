@@ -30,3 +30,13 @@ Phase 2 code and hosted schema are implemented. The Phase 2 acceptance gate rema
 - The generator uses a bounded first-complete search with fair candidate ordering. Its logged target-hour deviation is not an optimization guarantee; broader fairness/undesirable-shift tuning and representative host benchmarks remain for the Phase 3 release review.
 
 Local startup: `corepack pnpm install --frozen-lockfile`, then `corepack pnpm dev --port 3001` and open `http://localhost:3001` in Google Chrome. The developer server was already using port 3001 during Phase 2 tests. Next work is the user-requested final Auth and end-to-end review in Phase 3; do not start it automatically.
+
+## Post-Phase 2 annotation changes — 10 November 2026
+
+These requested edits precede Phase 3; they do not close the Phase 2 acceptance gate. Availability now uses a searchable employee list (three names initially, then batches of 25), multi-day selection, and a compact per-employee table. Team role names are job labels; every active employee is eligible for every label. Availability, overlap, rest, hours, and locks still constrain assignments. A scheduled shift can be explicitly cancelled for one day and restored with **Dodaj smenu**. Cancelled slots remain in the draft for audit/retry, but do not count as required coverage or appear in published snapshots. The settings panels flow into columns without the former empty grid row.
+
+The hosted migration `20261110221627_20261110220708_flexible_role_labels.sql` was applied to project `srpvabzbekenbuxxrbvr` after identity/schema inspection. It backfilled employee/role pairs, adds triggers for new employees and labels, and adds `assignments.cancelled` plus revised save/publish validation. Hosted verification found zero missing role pairs, zero cancelled existing assignments, and all 14 pre-existing assignments still present. Auth settings were not changed.
+
+Local `typecheck`, `lint`, `build`, `test:schema`, `test:schedule`, and Google Chrome `test:schedule-browser` passed. The Chrome journey uses isolated network fixtures, including multi-day availability, cancellation/restoration, and a 300-person team list. Hosted anonymous denial checks passed. Real authenticated hosted writes, second-session conflicts, and provider flows remain **not run** pending final review. No deployment or GitHub push occurred.
+
+The informational pricing panel now appears in the left sidebar above the free-pilot badge and sign-out. On narrow screens, where the sidebar is hidden, it remains visible at the end of Settings. Fixture Chrome checks at 390/768/1440 px, `typecheck`, and `lint` passed after this move. Phase 3 has not started.

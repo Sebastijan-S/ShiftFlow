@@ -11,10 +11,10 @@ const jwt=(data)=>Buffer.from(JSON.stringify(data)).toString('base64url');
 const token=`${jwt({alg:'HS256',typ:'JWT'})}.${jwt({sub:userId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),aud:'authenticated'})}.fixture`;
 const workspace={id:workspaceId,owner_user_id:userId,name:'Fixture Team',timezone:'Europe/Belgrade',setup_revision:10};
 const roles=[{id:'33333333-3333-4333-8333-333333333333',workspace_id:workspaceId,name:'Service'}];
-const employees=['Ari','Bea','Cal'].map((name,i)=>({id:`44444444-4444-4444-8444-00000000000${i}`,workspace_id:workspaceId,display_name:name,active:true,target_hours:8,preference:'none'}));
+const employees=[...['Ari','Bea','Cal'].map((name,i)=>({id:`44444444-4444-4444-8444-00000000000${i}`,workspace_id:workspaceId,display_name:name,active:true,target_hours:8,preference:'none'})),...Array.from({length:297},(_,i)=>({id:`44444444-4444-4444-9444-${String(i).padStart(12,'0')}`,workspace_id:workspaceId,display_name:`Radnik ${String(i+1).padStart(3,'0')}`,active:false,target_hours:8,preference:'none'}))];
 const shifts=[{id:'55555555-5555-4555-8555-000000000001',workspace_id:workspaceId,name:'Morning',start_time:'09:00:00',end_time:'13:00:00'},{id:'55555555-5555-4555-8555-000000000002',workspace_id:workspaceId,name:'Evening',start_time:'15:00:00',end_time:'19:00:00'}];
 const requirements=shifts.map((s,i)=>({id:`66666666-6666-4666-8666-00000000000${i}`,workspace_id:workspaceId,role_id:roles[0].id,shift_template_id:s.id,weekday:1,local_date:null,required_count:1}));
-const tables={roles,employees,shift_templates:shifts,staffing_requirements:requirements,employee_roles:employees.map((e)=>({workspace_id:workspaceId,employee_id:e.id,role_id:roles[0].id})),availability_windows:employees.flatMap((e)=>Array.from({length:7},(_,weekday)=>({id:`${e.id}-${weekday}`,workspace_id:workspaceId,employee_id:e.id,weekday,start_time:'08:00:00',end_time:'20:00:00'}))),availability_exceptions:[],scheduling_rules:[{workspace_id:workspaceId,max_weekly_hours:48,max_daily_hours:12,min_rest_hours:11}]};
+const tables={roles,employees,shift_templates:shifts,staffing_requirements:requirements,employee_roles:[],availability_windows:employees.filter((e)=>e.active).flatMap((e)=>Array.from({length:7},(_,weekday)=>({id:`${e.id}-${weekday}`,workspace_id:workspaceId,employee_id:e.id,weekday,start_time:'08:00:00',end_time:'20:00:00'}))),availability_exceptions:[],scheduling_rules:[{workspace_id:workspaceId,max_weekly_hours:48,max_daily_hours:12,min_rest_hours:11}]};
 let revision=0,publishedRevision=null,savedSlots=[]; const operations=[];
 const browser=await chromium.launch({executablePath:chrome,headless:true});
 await mkdir('test-results',{recursive:true});
@@ -28,7 +28,8 @@ try {
     if(path==='/auth/v1/logout') return json({});
     if(path==='/rest/v1/workspaces') return json(workspace);
     if(path==='/rest/v1/schedule_weeks') return json(revision?[{id:'77777777-7777-4777-8777-777777777777',week_start:week,revision,published_revision:publishedRevision}]:[]);
-    if(path==='/rest/v1/assignments') return json(savedSlots.map((s,i)=>({week_id:'77777777-7777-4777-8777-777777777777',slot_key:s.id,local_date:s.local_date,role_id:s.role_id,shift_template_id:s.shift_id,starts_at:i===0?'2026-11-09T08:00:00Z':'2026-11-09T14:00:00Z',ends_at:i===0?'2026-11-09T12:00:00Z':'2026-11-09T18:00:00Z',employee_id:s.employee_id,locked:s.locked})));
+    if(path==='/rest/v1/assignments') return json(savedSlots.map((s,i)=>({week_id:'77777777-7777-4777-8777-777777777777',slot_key:s.id,local_date:s.local_date,role_id:s.role_id,shift_template_id:s.shift_id,starts_at:i===0?'2026-11-09T08:00:00Z':'2026-11-09T14:00:00Z',ends_at:i===0?'2026-11-09T12:00:00Z':'2026-11-09T18:00:00Z',employee_id:s.employee_id,locked:s.locked,cancelled:s.cancelled})));
+    if(path==='/rest/v1/availability_windows' && request.method()==='POST') { const rows=JSON.parse(request.postData()); tables.availability_windows.push(...rows.map((row,i)=>({...row,id:`added-${i}-${Date.now()}`}))); return json(null,201); }
     if(path.startsWith('/rest/v1/rpc/save_schedule')) { const body=JSON.parse(request.postData()); operations.push(body); if(body.p_operation==='replace') await new Promise((resolve)=>setTimeout(resolve,150)); savedSlots=body.p_slots; revision++; return json(revision); }
     if(path.startsWith('/rest/v1/rpc/publish_schedule')) { publishedRevision=revision; return json(revision); }
     if(path.startsWith('/rest/v1/rpc/create_team_link')) return json(null);
@@ -72,6 +73,43 @@ try {
   await page.getByText('Sačuvana revizija 5').waitFor();
   assert.equal(operations.at(-1).p_expected_revision,4);
   assert.equal(operations.at(-1).p_operation,'undo');
+  await page.getByRole('button',{name:'Ukloni smenu'}).first().click();
+  await page.getByText('Sačuvana revizija 6').waitFor();
+  assert.equal(savedSlots[0].cancelled,true);
+  assert.equal(savedSlots[0].employee_id,null);
+  await page.getByRole('button',{name:/Dodaj smenu/}).first().click();
+  await page.getByText('Sačuvana revizija 7').waitFor();
+  assert.equal(savedSlots[0].cancelled,false);
+  assert.equal(await page.getByRole('button',{name:'Objavi ažuriranje'}).isDisabled(),true,'restored empty slot needs an employee');
   await page.getByText('Objavljena revizija').waitFor();
-  console.log('PASS: Google Chrome fixture login, generation, replacement, queued revisions, publish, undo, desktop/mobile/print layouts');
+  await page.getByRole('navigation',{name:'Mobilna navigacija'}).getByRole('button',{name:'Dostupnost'}).click();
+  await page.getByLabel('Pronađi zaposlenog').fill('Bea');
+  await page.getByRole('button',{name:/Bea.*prozora/}).click();
+  await page.locator('.weekday-picker').getByRole('checkbox',{name:'Ponedeljak'}).check();
+  await page.locator('.weekday-picker').getByRole('checkbox',{name:'Utorak'}).check();
+  await page.getByRole('button',{name:'Dodaj za označene dane'}).click();
+  await page.getByText('Sačuvano').waitFor();
+  assert.equal(tables.availability_windows.filter((row)=>row.employee_id===employees[1].id && row.start_time==='09:00' && [1,2].includes(row.weekday)).length,2);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'availability mobile horizontal overflow');
+  await page.screenshot({path:'test-results/availability-fixture-390.png',fullPage:true});
+  await page.getByRole('navigation',{name:'Mobilna navigacija'}).getByRole('button',{name:'Podešavanja'}).click();
+  assert.equal(await page.locator('.settings-grid').evaluate((element)=>getComputedStyle(element).columnCount),'1');
+  assert.equal(await page.locator('.mobile-plans').isVisible(),true,'plans remain available when the sidebar is hidden');
+  await page.screenshot({path:'test-results/settings-fixture-390.png',fullPage:true});
+  await page.setViewportSize({width:768,height:900});
+  assert.equal(await page.locator('.sidebar-plans').isVisible(),true);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'tablet horizontal overflow');
+  await page.setViewportSize({width:1440,height:900});
+  assert.equal(await page.locator('.settings-grid').evaluate((element)=>getComputedStyle(element).columnCount),'2');
+  assert.equal(await page.locator('.sidebar-plans').isVisible(),true,'plans appear above the pilot badge in the sidebar');
+  assert.equal(await page.locator('.sidebar-bottom > *').first().getAttribute('class'),'sidebar-plans');
+  assert.equal(await page.locator('.mobile-plans').isVisible(),false);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'settings desktop horizontal overflow');
+  await page.screenshot({path:'test-results/settings-fixture-1440.png',fullPage:true});
+  await page.getByRole('navigation',{name:'Glavna navigacija'}).getByRole('button',{name:'Tim'}).click();
+  assert.equal(await page.locator('.role-pill').count(),0,'role labels are not per-employee restrictions');
+  assert.equal(await page.locator('.item-card').count(),10,'300-person team renders a manageable first page');
+  assert.equal(await page.getByRole('button',{name:/Prikaži još/}).count(),1);
+  await page.screenshot({path:'test-results/team-fixture-1440.png',fullPage:true});
+  console.log('PASS: Google Chrome fixture login, generation, replacement, queued revisions, publish, undo, cancel/restore shift, multi-day availability, 300-person team, desktop/mobile/settings/print layouts');
 } finally { await browser.close(); }

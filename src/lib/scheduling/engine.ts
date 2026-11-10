@@ -1,7 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { SetupData } from "@/lib/types";
 
-export type Slot = { id: string; localDate: string; roleId: string; shiftId: string; start: number; end: number; employeeId: string | null; locked: boolean };
+export type Slot = { id: string; localDate: string; roleId: string; shiftId: string; start: number; end: number; employeeId: string | null; locked: boolean; cancelled?: boolean };
 export type Assignment = Pick<Slot, "id" | "employeeId" | "locked">;
 export type ScheduleInput = { weekStart: string; timezone: string; setup: SetupData; adjacent: Slot[]; existing: Slot[] };
 export type Issue = { slotId: string; reason: string };
@@ -65,7 +65,6 @@ function available(input: ScheduleInput, slot: Slot, employeeId: string): boolea
 export function violation(input: ScheduleInput, slot: Slot, employeeId: string, assigned: Slot[], availabilityCache?: Map<string, boolean>): string | null {
   const employee = input.setup.employees.find((e) => e.id === employeeId);
   if (!employee?.active) return "inactive or missing employee";
-  if (!input.setup.employeeRoles.some((r) => r.employee_id === employeeId && r.role_id === slot.roleId)) return "role not eligible";
   try {
     const key = `${slot.id}|${employeeId}`;
     let allowed = availabilityCache?.get(key);
@@ -107,6 +106,7 @@ export function validateSchedule(input: ScheduleInput, slots: Slot[]): Issue[] {
 export function replace(input: ScheduleInput, slots: Slot[], id: string, employeeId: string | null): Slot[] {
   const target = slots.find((s) => s.id === id);
   if (!target) throw new Error("Assignment not found.");
+  if (target.cancelled) throw new Error("Restore the shift before assigning an employee.");
   if (target.locked) throw new Error("Unlock this assignment first.");
   const next = slots.map((s) => s.id === id ? { ...s, employeeId } : s);
   const issues = validateSchedule(input, next);
@@ -117,6 +117,7 @@ export function replace(input: ScheduleInput, slots: Slot[], id: string, employe
 export function swap(input: ScheduleInput, slots: Slot[], first: string, second: string): Slot[] {
   const a = slots.find((s) => s.id === first), b = slots.find((s) => s.id === second);
   if (!a || !b || !a.employeeId || !b.employeeId || a.locked || b.locked) throw new Error("Both assignments must be filled and unlocked.");
+  if (a.cancelled || b.cancelled) throw new Error("Restore the shift before swapping.");
   const next = slots.map((s) => s.id === first ? { ...s, employeeId: b.employeeId } : s.id === second ? { ...s, employeeId: a.employeeId } : s);
   const issues = validateSchedule(input, next);
   if (issues.length) throw new Error(`${issues[0].slotId}: ${issues[0].reason}`);
@@ -125,7 +126,9 @@ export function swap(input: ScheduleInput, slots: Slot[], first: string, second:
 
 export function generate(input: ScheduleInput, options: { maxNodes?: number; signal?: AbortSignal; onProgress?: (nodes: number) => void } = {}): Result {
   const began = performance.now(); const limit = options.maxNodes ?? 250_000;
-  const demand = expandDemand(input);
+  const allDemand = expandDemand(input);
+  const cancelled = input.existing.filter((slot) => slot.cancelled && allDemand.some((item) => item.id === slot.id));
+  const demand = allDemand.filter((slot) => !cancelled.some((item) => item.id === slot.id));
   const locked = input.existing.filter((s) => s.locked);
   const invalid = validateSchedule(input, locked);
   for (const slot of locked) {
@@ -162,7 +165,7 @@ export function generate(input: ScheduleInput, options: { maxNodes?: number; sig
     if (best.length < demand.length) search(index + 1, current);
   }
   search(0, locked);
-  const slots = demand.map((s) => best.find((b) => b.id === s.id) ?? s);
-  const issues = slots.filter((s) => !s.employeeId).map((s) => ({ slotId: s.id, reason: staticCandidates.get(s.id)?.length ? "No compatible assignment with other shifts and limits" : "No eligible, available employee" }));
+  const slots = [...demand.map((s) => best.find((b) => b.id === s.id) ?? s), ...cancelled].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
+  const issues = slots.filter((s) => !s.cancelled && !s.employeeId).map((s) => ({ slotId: s.id, reason: staticCandidates.get(s.id)?.length ? "No compatible assignment with other shifts and limits" : "No eligible, available employee" }));
   return { status: options.signal?.aborted ? "cancelled" : issues.length === 0 ? "complete" : stopped ? "limit" : "incomplete", slots, issues, nodes, elapsedMs: performance.now() - began, coverage: demand.length ? best.length / demand.length : 1, targetDeviation: score(best) };
 }

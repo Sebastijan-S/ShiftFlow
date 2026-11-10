@@ -18,7 +18,7 @@ try {
   const wa = (await sql("insert into public.workspaces(owner_user_id,name) values ($1,'Test A') returning id",[a])).rows[0].id;
   const role = (await sql("insert into public.roles(workspace_id,name) values ($1,'Service') returning id",[wa])).rows[0].id;
   const employee = (await sql("insert into public.employees(workspace_id,display_name) values ($1,'Ari') returning id",[wa])).rows[0].id;
-  await sql('insert into public.employee_roles(workspace_id,employee_id,role_id) values ($1,$2,$3)',[wa,employee,role]);
+  assert.equal((await sql('select count(*)::int as n from public.employee_roles where employee_id=$1 and role_id=$2',[employee,role])).rows[0].n,1,'new employee receives existing role label');
   const shift = (await sql("insert into public.shift_templates(workspace_id,name,start_time,end_time) values ($1,'Day','09:00','17:00') returning id",[wa])).rows[0].id;
   const requirement = (await sql('insert into public.staffing_requirements(workspace_id,role_id,shift_template_id,local_date,required_count) values ($1,$2,$3,$4,1) returning id',[wa,role,shift,'2026-11-09'])).rows[0].id;
   await sql("insert into public.availability_windows(workspace_id,employee_id,weekday,start_time,end_time) values ($1,$2,1,'08:00','18:00')",[wa,employee]);
@@ -83,10 +83,20 @@ try {
   const dstWeek=(await sql("insert into public.schedule_weeks(workspace_id,week_start) values ($1,'2026-10-19') returning id",[wa])).rows[0].id;
   await fail(() => sql("insert into public.assignments(workspace_id,week_id,slot_key,local_date,role_id,shift_template_id,position,starts_at,ends_at,employee_id) values ($1,$2,'dst','2026-10-25',$3,$4,0,'2026-10-25 00:30+00','2026-10-25 03:00+00',$5)",[wa,dstWeek,role,shift,employee]),/Ambiguous local/);
   assert.equal((await sql('select count(*)::int as n from public.assignments where week_id=$1',[dstWeek])).rows[0].n,0,'DST rejection rolls back assignment');
+  await db.exec('set role authenticated'); await db.exec(`set request.jwt.claim.sub = '${a}'`);
+  assert.equal((await save(3,newSetup,13,[{...slot,employee_id:null,cancelled:true}])).rows[0].rev,4);
+  assert.equal((await sql('select public.publish_schedule($1,$2,$3) as rev',[wa,'2026-11-09',4])).rows[0].rev,4,'explicitly cancelled shift may be published');
+  await db.exec('set role anon');
+  assert.equal((await sql('select public.read_team_week($1,$2) as result',[nextToken,'2026-11-09'])).rows[0].result.assignments.length,0,'cancelled shift absent from team view');
+  await db.exec('set role authenticated'); await db.exec(`set request.jwt.claim.sub = '${a}'`);
+  assert.equal((await save(4,newSetup,14,[{...slot,employee_id:null,cancelled:false}])).rows[0].rev,5,'restore creates an uncovered draft slot');
+  await fail(() => sql('select public.publish_schedule($1,$2,$3)',[wa,'2026-11-09',5]),/Incomplete/);
   await db.exec('set role authenticated'); await db.exec(`set request.jwt.claim.sub = '${b}'`);
   const roleB=(await sql("insert into public.roles(workspace_id,name) values ($1,'Service') returning id",[wb])).rows[0].id;
   const peopleB=(await sql("insert into public.employees(workspace_id,display_name) values ($1,'Bea'),($1,'Cal') returning id",[wb])).rows.map((r)=>r.id);
-  for (const person of peopleB) { await sql('insert into public.employee_roles(workspace_id,employee_id,role_id) values ($1,$2,$3)',[wb,person,roleB]); await sql("insert into public.availability_windows(workspace_id,employee_id,weekday,start_time,end_time) values ($1,$2,1,'08:00','20:00')",[wb,person]); }
+  for (const person of peopleB) { assert.equal((await sql('select count(*)::int as n from public.employee_roles where employee_id=$1 and role_id=$2',[person,roleB])).rows[0].n,1); await sql("insert into public.availability_windows(workspace_id,employee_id,weekday,start_time,end_time) values ($1,$2,1,'08:00','20:00')",[wb,person]); }
+  const laterRole=(await sql("insert into public.roles(workspace_id,name) values ($1,'Support') returning id",[wb])).rows[0].id;
+  assert.equal((await sql('select count(*)::int as n from public.employee_roles where role_id=$1',[laterRole])).rows[0].n,2,'new label is available to existing employees');
   const shiftsB=(await sql("insert into public.shift_templates(workspace_id,name,start_time,end_time) values ($1,'Morning','09:00','13:00'),($1,'Evening','15:00','19:00') returning id",[wb])).rows.map((r)=>r.id);
   const needsB=[];
   for (const template of shiftsB) needsB.push((await sql("insert into public.staffing_requirements(workspace_id,role_id,shift_template_id,local_date,required_count) values ($1,$2,$3,'2026-11-09',1) returning id",[wb,roleB,template])).rows[0].id);

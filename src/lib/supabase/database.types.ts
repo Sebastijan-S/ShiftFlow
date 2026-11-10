@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       assignments: {
         Row: {
+          cancelled: boolean
           employee_id: string | null
           ends_at: string
           id: string
@@ -30,6 +31,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          cancelled?: boolean
           employee_id?: string | null
           ends_at: string
           id?: string
@@ -44,6 +46,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          cancelled?: boolean
           employee_id?: string | null
           ends_at?: string
           id?: string
