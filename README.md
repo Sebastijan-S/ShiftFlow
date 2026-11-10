@@ -1,0 +1,58 @@
+# NewShiftFlow — pilot planning pack
+
+Status: Phase 1 foundation implemented. Real account and saved setup round trips remain unverified; the user deferred pilot Auth settings and real signup checks until the final review. Updated 10 November 2026.
+
+## Local development
+
+Use Node 24 and pnpm 12.18.0 (`corepack pnpm` if pnpm is not on PATH). Copy `.env.local.example` to `.env.local`, set the project's publishable key, then run `corepack pnpm install --frozen-lockfile` and `corepack pnpm exec next dev --port 3001`. Open `http://localhost:3001` in Google Chrome. Port 3000 may serve the old read-only project on this machine. The local `.env.local` is ignored by Git.
+
+Run `corepack pnpm typecheck`, `corepack pnpm lint`, `corepack pnpm build`, `corepack pnpm test:schema`, and `corepack pnpm test:phone`. With the dev server running, `corepack pnpm test:browser` uses the installed Google Chrome executable.
+
+See [Phase 1 status](docs/PHASE1_STATUS.md) for verified behavior and the remaining Auth setting dependency. The hosted schema is managed by [versioned migrations](supabase/migrations/).
+
+Build a reliable shift scheduler for businesses with shift-based teams. The core promise is: enter staffing needs and who cannot work when, click Generate, and receive a usable schedule. Manual changes handle exceptions.
+
+This pack supersedes the earlier 1:1 recreation brief. The original download is incomplete; it is reference material, not a working baseline to reproduce blindly. The Work GPT ShiftFlow 2 project is excluded.
+
+## Start in VS Code
+
+Open this folder as the workspace. Start each phase separately and review its completion report before requesting the next.
+
+**Phase 1 prompt**
+> Read AGENTS.md, MASTER_PROMPT.md, and the active documents in docs/. Implement Phase 1 only. Start with the database foundation and authentication, then the light-blue interface and business setup. Run the Phase 1 checks and stop with a completion report.
+
+**Phase 2 prompt**
+> Review the completed Phase 1 and its checks. Implement Phase 2 only, following the generator, replacement/swap, persistence, and sharing requirements. Run the Phase 2 checks and stop with a completion report.
+
+**Phase 3 prompt**
+> Review Phases 1 and 2. Complete Phase 3 testing, pilot preparation, and fixes. Prepare the release and report readiness. Do not publish publicly until I explicitly ask you to deploy.
+
+If a previous phase is incomplete, finish or explain the dependency before starting the next. Do not silently jump phases. Phase completion requires demonstrated behavior, not just files being present.
+
+## Reading order
+
+1. [Master prompt](MASTER_PROMPT.md)
+2. [MVP scope and prices](docs/MVP_SCOPE.md)
+3. [Three-phase roadmap](docs/ROADMAP.md)
+4. [Design system and images](docs/DESIGN_SYSTEM.md)
+5. [Database and technical plan](docs/TECHNICAL_PLAN.md)
+6. [Acceptance checklist](docs/ACCEPTANCE_CHECKLIST.md)
+7. [Pilot guide](docs/PILOT_GUIDE.md)
+8. [Database inspection](docs/DATABASE_STATUS.md)
+
+[Reference images](references/README.md) are supplied by the user. Material under docs/archive is superseded and must not drive implementation.
+
+## Approved decisions
+
+- Next.js App Router, TypeScript/TSX, Supabase PostgreSQL and Auth, shadcn preset b2fA9jiwaO.
+- Light-blue default design; industry-neutral business/team terminology.
+- Excellent automatic generation is the main selling point, including date/time unavailability.
+- Drag-and-drop replacements, two-way swaps, cascading contextual menus, and locking.
+- One stable read-only team link for published weekly calendars.
+- Email OR phone number + password; no email/SMS confirmation during the pilot.
+- Basic: EUR 15/business/month. Premium: EUR 25/business/month for now. Business-specific Premium adaptations are later work.
+- Invited pilot testing is free; billing implementation is excluded.
+
+## Boundaries
+
+The original planning step created only documents and reference images. Phase 1 has since scaffolded the application and applied two database migrations. Auth settings remain unchanged; no code has been pushed or deployed. Deployment provider, public domain, final Premium entitlements, and tax display remain launch/business decisions.
