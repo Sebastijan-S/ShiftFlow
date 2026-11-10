@@ -73,7 +73,8 @@ try {
   await page.getByText('Sačuvana revizija 5').waitFor();
   assert.equal(operations.at(-1).p_expected_revision,4);
   assert.equal(operations.at(-1).p_operation,'undo');
-  await page.getByRole('button',{name:'Ukloni smenu'}).first().click();
+  await page.getByRole('button',{name:'Ukloni smenu'}).first().focus();
+  await page.keyboard.press('Enter');
   await page.getByText('Sačuvana revizija 6').waitFor();
   assert.equal(savedSlots[0].cancelled,true);
   assert.equal(savedSlots[0].employee_id,null);

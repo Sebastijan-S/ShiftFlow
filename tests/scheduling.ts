@@ -17,9 +17,13 @@ for (const kind of ["hospitality","service","retail"] as const) for (const count
   const input = fixture(kind,count);
   const result = generate(input,{maxNodes:5000});
   assert.equal(result.status,"complete",`${kind}/${count}: ${result.status} ${result.issues.length} gaps`);
-  assert.deepEqual(validateSchedule(input,result.slots),[]);
+  const hardViolations=validateSchedule(input,result.slots);
+  assert.deepEqual(hardViolations,[]);
   assert.deepEqual(generate(input,{maxNodes:5000}).slots,result.slots,"reproducible generation");
-  console.log(`${kind}/${count}: ${result.slots.length} slots, ${result.elapsedMs.toFixed(0)}ms, deviation ${result.targetDeviation.toFixed(1)}h`);
+  const lateByEmployee=new Map<string,number>();
+  for (const slot of result.slots) if (slot.employeeId && slot.shiftId==="late") lateByEmployee.set(slot.employeeId,(lateByEmployee.get(slot.employeeId)??0)+1);
+  const lateCounts=input.setup.employees.map((employee)=>lateByEmployee.get(employee.id)??0);
+  console.log(`${kind}/${count}: ${result.slots.length} slots, ${(result.coverage*100).toFixed(0)}% coverage, ${hardViolations.length} hard violations, ${result.elapsedMs.toFixed(0)}ms, target deviation ${result.targetDeviation.toFixed(1)}h, late shift range ${Math.min(...lateCounts)}-${Math.max(...lateCounts)}`);
 }
 const input=fixture("service",10);
 const slots=expandDemand(input);
@@ -72,6 +76,7 @@ const incomplete=generate(impossible,{maxNodes:5000});
 assert.equal(incomplete.status,"incomplete");
 assert.ok(incomplete.issues.length>0);
 assert.equal(generate(impossible,{maxNodes:1}).status,"limit");
+console.log(`unresolved fixtures: proven tiny exhaustive infeasible = 1, bounded search limit = 1`);
 const cancelledSlot={...tiny[0],employeeId:null,cancelled:true};
 const withCancelled=generate({...oracleInput,existing:tiny.map((slot)=>({...slot,employeeId:null,cancelled:true}))},{maxNodes:100});
 assert.equal(withCancelled.status,"complete");

@@ -111,5 +111,21 @@ try {
   await fail(() => saveB(2,12,slotsB),/absent/);
   assert.deepEqual((await sql('select employee_id from public.assignments where workspace_id=$1 order by starts_at',[wb])).rows.map((r)=>r.employee_id),[peopleB[1],peopleB[0]],'failed swap preserves both sides');
   assert.equal((await sql('select revision from public.schedule_weeks where workspace_id=$1',[wb])).rows[0].revision,2);
-  console.log('PASS: transactional save/swap, retry, stale revisions/setup, tenant isolation, hard rules, DST, publication, anonymous link');
+  const contenders=await Promise.allSettled([saveB(2,15,swappedB),saveB(2,16,swappedB)]);
+  assert.equal(contenders.filter((item)=>item.status==='fulfilled').length,1,'one contender commits');
+  assert.equal(contenders.filter((item)=>item.status==='rejected' && /Schedule changed/.test(String(item.reason))).length,1,'stale contender receives conflict');
+  assert.equal((await sql('select revision from public.schedule_weeks where workspace_id=$1',[wb])).rows[0].revision,3);
+  await db.exec('reset role');
+  const beforeBackup = (await sql('select (select count(*)::int from public.assignments) assignments, (select count(*)::int from public.published_revisions) publications, (select count(*)::int from public.operation_receipts) receipts')).rows[0];
+  const backup = await db.dumpDataDir();
+  const restored = new PGlite({ loadDataDir: backup });
+  try {
+    await restored.waitReady;
+    const afterRestore = (await restored.query('select (select count(*)::int from public.assignments) assignments, (select count(*)::int from public.published_revisions) publications, (select count(*)::int from public.operation_receipts) receipts')).rows[0];
+    assert.deepEqual(afterRestore,beforeBackup,'restored records match the disposable source');
+    assert.equal((await restored.query('select count(*)::int as n from public.assignments a left join public.schedule_weeks w on w.id=a.week_id and w.workspace_id=a.workspace_id where w.id is null')).rows[0].n,0,'restored assignment references remain valid');
+    await restored.exec('set role anon');
+    assert.equal((await restored.query('select public.read_team_week($1,$2) as result',[nextToken,'2026-11-09'])).rows[0].result.assignments.length,0,'restored publication remains readable through the active token');
+  } finally { await restored.close(); }
+  console.log('PASS: transactional save/swap, retry, stale revisions/setup, isolated concurrent writes, tenant isolation, hard rules, DST, publication, anonymous link, disposable backup/restore');
 } finally { await db.close(); }

@@ -71,7 +71,7 @@ Use two actual isolated test identities and an anonymous caller. Owner-only test
 - [ ] D4 database review completed after final migrations.
 - [ ] Real Supabase Auth/session tests pass; PGlite or mocks alone are not accepted.
 - [ ] Chrome desktop/mobile flows checked, including actual touch/keyboard alternatives where available.
-- [ ] Generator coverage/fairness/timing results recorded at representative sizes.
+- [x] Generator coverage/fairness/timing results recorded at representative sizes. Evidence: 10 Nov 2026, isolated `corepack pnpm test:schedule`, nine 10/25/50-person fixtures with 100% coverage and zero hard violations; timings, target-hour deviations and late-shift ranges in `PHASE3_STATUS.md`. This does not establish optimal fairness.
 - [ ] No unresolved unauthorized access, data loss, invalid assignments or broken publication defects.
 - [ ] Pilot guide and feedback route are usable; no raw tokens/passwords/private notes in logs.
 - [ ] Environment, Auth provider settings, migration order, backups and rollback documented.
