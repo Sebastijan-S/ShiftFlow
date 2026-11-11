@@ -7,7 +7,7 @@ import { expandDemand, replace, swap, validateSchedule, type Result, type Schedu
 import { loadWeek, monday, moveWeek, publishWeek, saveWeek } from "@/lib/scheduling/data";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
-type Props = { workspace: Workspace; data: SetupData; navigate: (view: "team" | "availability" | "settings") => void };
+type Props = { workspace: Workspace; data: SetupData; navigate?: (view: "team" | "availability" | "settings") => void };
 type QueuedChange = { next: Slot[]; previous: Slot[]; operation: string; id: string };
 const dayLabel = (value: string) => new Intl.DateTimeFormat("sr-Latn-RS", { weekday: "short", day: "numeric", month: "short" }).format(new Date(`${value}T12:00:00Z`));
 const timeLabel = (value: number, zone: string) => new Intl.DateTimeFormat("sr-Latn-RS", { timeZone: zone, hour: "2-digit", minute: "2-digit" }).format(value);
@@ -105,7 +105,7 @@ export function SchedulePanel({ workspace, data, navigate }: Props) {
   const goWeek=(delta:number)=>{ if (working || pending) return; setLoaded(false); setStatus("Učitavanje rasporeda…"); setWeek(moveWeek(week,delta)); };
 
   if (!data.employees.length || !data.roles.length || !data.shifts.length || !data.requirements.length || !data.windows.length)
-    return <div className="schedule-empty"><span className="eyebrow">RASPORED</span><h2>Pripremite podatke za generisanje.</h2><p>Potrebni su zaposleni, uloge, smene, dostupnost i potrebna pokrivenost.</p><div className="step-list"><button className="step" onClick={() => navigate("team")}>Tim i uloge →</button><button className="step" onClick={() => navigate("availability")}>Dostupnost →</button><button className="step" onClick={() => navigate("settings")}>Smene i potrebe →</button></div></div>;
+    return <div className="schedule-empty"><span className="eyebrow">RASPORED</span><h2>Pripremite podatke za generisanje.</h2><p>Potrebni su zaposleni, uloge, smene, dostupnost i potrebna pokrivenost.</p>{navigate && <div className="step-list"><button className="step" onClick={() => navigate("team")}>Tim i uloge →</button><button className="step" onClick={() => navigate("availability")}>Dostupnost →</button><button className="step" onClick={() => navigate("settings")}>Smene i potrebe →</button></div>}</div>;
   if (!loaded) return <div className="panel" role="status">{error || "Učitavanje rasporeda…"} {error && <button onClick={()=>void refresh()}>Pokušaj ponovo</button>}</div>;
   const slots = state.slots.length ? state.slots : (() => { try { return expandDemand(input); } catch { return []; } })();
   const dates=Array.from({length:7},(_,i)=>Temporal.PlainDate.from(week).add({days:i}).toString());

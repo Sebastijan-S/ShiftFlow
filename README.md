@@ -10,6 +10,10 @@ Run `corepack pnpm typecheck`, `corepack pnpm lint`, `corepack pnpm build`, `cor
 
 See [Phase 2 status](docs/PHASE2_STATUS.md) and [Phase 1 status](docs/PHASE1_STATUS.md) for verified behavior and deferred checks. The hosted schema is managed by [versioned migrations](supabase/migrations/).
 
+## Pojednostavljeni prikaz za pilot
+
+Posle prijave otvorite `https://shiftfflow.netlify.app/radni-raspored`. Tu su samo **Raspored** sa postojećim generisanjem i izmenama i **Odsustva i izuzeci** za ceo dan ili deo dana. Redovna nedeljna dostupnost, tim i podešavanja ostaju na glavnoj adresi. Ovaj prikaz koristi isti postojeći nalog i prava pristupa; posebni nalozi i ograničene uloge nisu deo ove pilot izmene. Na stranici nema dugmeta za povratak na glavni prikaz. Objavljeni link za tim je i dalje zaseban i samo za čitanje.
+
 Build a reliable shift scheduler for businesses with shift-based teams. The core promise is: enter staffing needs and who cannot work when, click Generate, and receive a usable schedule. Manual changes handle exceptions.
 
 This pack supersedes the earlier 1:1 recreation brief. The original download is incomplete; it is reference material, not a working baseline to reproduce blindly. The Work GPT ShiftFlow 2 project is excluded.

@@ -30,6 +30,7 @@ try {
     if(path==='/rest/v1/schedule_weeks') return json(revision?[{id:'77777777-7777-4777-8777-777777777777',week_start:week,revision,published_revision:publishedRevision}]:[]);
     if(path==='/rest/v1/assignments') return json(savedSlots.map((s,i)=>({week_id:'77777777-7777-4777-8777-777777777777',slot_key:s.id,local_date:s.local_date,role_id:s.role_id,shift_template_id:s.shift_id,starts_at:i===0?'2026-11-09T08:00:00Z':'2026-11-09T14:00:00Z',ends_at:i===0?'2026-11-09T12:00:00Z':'2026-11-09T18:00:00Z',employee_id:s.employee_id,locked:s.locked,cancelled:s.cancelled})));
     if(path==='/rest/v1/availability_windows' && request.method()==='POST') { const rows=JSON.parse(request.postData()); tables.availability_windows.push(...rows.map((row,i)=>({...row,id:`added-${i}-${Date.now()}`}))); return json(null,201); }
+    if(path==='/rest/v1/availability_exceptions' && request.method()==='POST') { const row=JSON.parse(request.postData()); const saved={...row,id:`absence-${Date.now()}`}; tables.availability_exceptions.push(saved); return json(saved,201); }
     if(path.startsWith('/rest/v1/rpc/save_schedule')) { const body=JSON.parse(request.postData()); operations.push(body); if(body.p_operation==='replace') await new Promise((resolve)=>setTimeout(resolve,150)); savedSlots=body.p_slots; revision++; return json(revision); }
     if(path.startsWith('/rest/v1/rpc/publish_schedule')) { publishedRevision=revision; return json(revision); }
     if(path.startsWith('/rest/v1/rpc/create_team_link')) return json(null);
@@ -131,5 +132,22 @@ try {
   assert.equal(savedSlots[0].employee_id,employees[3].id,'manual change can select an inactive employee');
   await page.getByRole('button',{name:'Objavi ažuriranje'}).click();
   await page.getByText('Objavljena revizija 8').waitFor();
-  console.log('PASS: Google Chrome fixture login, generation, replacement, queued revisions, publish, undo, cancel/restore shift, multi-day availability, 300-person team, desktop/mobile/settings/print layouts');
+  await page.goto(`${base}/radni-raspored`,{waitUntil:'networkidle'});
+  await page.getByRole('button',{name:'Generiši'}).waitFor();
+  assert.equal(await page.getByRole('navigation',{name:'Glavna navigacija'}).getByRole('button').count(),2,'simple view has two destinations');
+  assert.equal(await page.getByRole('navigation',{name:'Glavna navigacija'}).getByRole('button',{name:'Tim'}).count(),0);
+  await page.getByRole('navigation',{name:'Glavna navigacija'}).getByRole('button',{name:'Odsustva i izuzeci'}).click();
+  assert.equal(await page.getByText('Dostupnost po zaposlenom').count(),0,'weekly availability stays out of simple view');
+  await page.getByLabel('Zaposleni').selectOption(employees[1].id);
+  await page.getByLabel('Datum').fill('2026-11-13');
+  await page.getByRole('button',{name:'Dodaj izuzetak'}).click();
+  await page.getByText('Sačuvano').waitFor();
+  assert.equal(tables.availability_exceptions.length,1,'absence saves through existing workspace data');
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.getByRole('navigation',{name:'Mobilna navigacija'}).getByRole('button').count(),2);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'simple mobile view has no horizontal overflow');
+  await page.getByRole('navigation',{name:'Mobilna navigacija'}).getByRole('button',{name:'Raspored'}).focus();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:'Generiši'}).waitFor();
+  console.log('PASS: Google Chrome fixture manager and simple schedule/absence views at desktop and mobile sizes');
 } finally { await browser.close(); }
