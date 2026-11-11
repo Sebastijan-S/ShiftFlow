@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const themeKey = "shiftflow-theme";
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   useEffect(() => {
     const current = document.documentElement.classList.contains("dark");
     const timer = setTimeout(() => setDark(current), 0);

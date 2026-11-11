@@ -11,13 +11,17 @@ try {
     const page=await browser.newPage({viewport:{width,height:900}});
     await page.goto(`${base}/team/${'0'.repeat(64)}`,{waitUntil:'networkidle'});
     await page.getByRole('heading',{name:/Nedelja od/}).waitFor();
+    assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'shared view defaults to dark');
     await page.getByText('Za ovu nedelju nema objavljenog rasporeda.').waitFor();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);
     await page.screenshot({path:`test-results/team-empty-${width}.png`,fullPage:true});
     if (width===390) {
+      await page.getByRole('button',{name:'Uključi svetli režim'}).click();
+      await page.reload({waitUntil:'networkidle'});
+      assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),false,'shared light theme persists');
       await page.getByRole('button',{name:'Uključi tamni režim'}).click();
       await page.reload({waitUntil:'networkidle'});
-      assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'shared theme persists');
+      assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'shared dark theme persists');
       await page.screenshot({path:'test-results/team-empty-dark-390.png',fullPage:true});
     }
     await page.getByRole('button',{name:'Sledeća nedelja'}).click();

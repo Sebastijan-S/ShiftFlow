@@ -37,12 +37,13 @@ try {
     return json({});
   });
   await page.goto(base,{waitUntil:'networkidle'});
-  await page.getByRole('button',{name:'Uključi tamni režim'}).click();
-  assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true);
+  assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'dark is the default theme');
   await page.reload({waitUntil:'networkidle'});
-  assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'theme persists after reload');
+  assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),true,'default theme persists after reload');
   await page.screenshot({path:'test-results/auth-dark-fixture-1440.png',fullPage:true});
   await page.getByRole('button',{name:'Uključi svetli režim'}).click();
+  await page.reload({waitUntil:'networkidle'});
+  assert.equal(await page.locator('html').evaluate((element)=>element.classList.contains('dark')),false,'chosen light theme persists after reload');
   await page.getByLabel('Email adresa').fill('fixture@example.invalid');
   await page.getByLabel('Lozinka').fill('fixture-password');
   await page.getByRole('button',{name:'Prijavi se'}).click();
