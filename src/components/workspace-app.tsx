@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { errorMessage } from "@/lib/errors";
+import { Button } from "@/components/ui/button";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { CalendarBlank, UsersThree, Clock, GearSix } from "@phosphor-icons/react";
 import { AuthPanel } from "@/components/auth-panel";
@@ -31,14 +34,28 @@ export default function WorkspaceApp({ simple = false }: { simple?: boolean }) {
   const [workspace, setWorkspace] = useState<Workspace | null>(null); const [data, setData] = useState<SetupData>(emptyData);
   const [view, setView] = useState<View>("schedule"); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [saved, setSaved] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const saving=useRef(false);
+  const identity=useRef<string | null>(null);
+  const authEpoch=useRef(0);
   const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
   const activeMenu = simple ? simpleMenu : menu;
 
   useEffect(() => {
     const db = supabaseBrowser();
-    void db.auth.getUser().then(({ data: result }) => { setUser(result.user); setChecking(false); }).catch(() => setChecking(false));
-    const { data: subscription } = db.auth.onAuthStateChange((_event, session) => { setUser(session?.user ?? null); setWorkspace(null); setData(emptyData); setError(""); });
-    return () => subscription.subscription.unsubscribe();
+    let active = true, authEvent = false;
+    const acceptUser = (next: User | null) => {
+      if (!active) return;
+      if (identity.current !== (next?.id ?? null)) {
+        authEpoch.current++;
+        identity.current = next?.id ?? null;
+        setWorkspace(null); setData(emptyData); setError(""); setSaved(""); setView("schedule");
+      }
+      setUser((current) => current?.id === next?.id ? current : next);
+      setChecking(false);
+    };
+    void db.auth.getUser().then(({ data: result }) => { if (!authEvent) acceptUser(result.user); }).catch(() => { if (active) setChecking(false); });
+    const { data: subscription } = db.auth.onAuthStateChange((_event, session) => { authEvent = true; acceptUser(session?.user ?? null); });
+    return () => { active = false; subscription.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -50,33 +67,36 @@ export default function WorkspaceApp({ simple = false }: { simple?: boolean }) {
       if (!active) return;
       if (result.error) { setError(result.error.message); setChecking(false); return; }
       const found = result.data as Workspace | null;
-      setWorkspace(found);
       if (found) {
-        try { const loaded = await loadSetup(found.id); if (active) setData(loaded); }
-        catch (cause) { if (active) setError(cause instanceof Error ? cause.message : "Učitavanje nije uspelo."); }
-      }
+        try { const loaded = await loadSetup(found.id); if (active) { setData(loaded); setWorkspace(found); } }
+        catch (cause) { if (active) setError(errorMessage(cause,"Učitavanje nije uspelo.")); }
+      } else setWorkspace(null);
       if (active) setChecking(false);
     })();
     return () => { active = false; };
   }, [user, reloadKey]);
 
   const run = useCallback(async (action: () => Promise<unknown>) => {
+    if(saving.current) return;
+    saving.current=true;
+    const owner = authEpoch.current;
     setBusy(true); setSaved(""); setError("");
-    try { await action(); setSaved("Sačuvano"); refresh(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Čuvanje nije uspelo."); }
-    finally { setBusy(false); }
+    try { await action(); if (authEpoch.current === owner) { setSaved("Sačuvano"); refresh(); } }
+    catch (cause) { if (authEpoch.current === owner) setError(errorMessage(cause,"Čuvanje nije uspelo.")); }
+    finally { saving.current=false; setBusy(false); }
   }, [refresh]);
 
   if (checking) return <main className="loading">Učitavanje ShiftFlow…</main>;
   if (!user) return <AuthPanel />;
-  if (!workspace && error) return <main className="setup-wrap"><div className="notice error" role="alert">{error} <button onClick={refresh}>Pokušaj ponovo</button></div></main>;
-  if (!workspace) return <WorkspaceCreate userId={user.id} onCreated={refresh} />;
-  return <div className="app-shell"><aside className="sidebar"><div className="brand">✳ ShiftFlow</div><div className="workspace-chip"><span className="workspace-icon">{workspace.name.slice(0, 1).toUpperCase()}</span><span><strong>{workspace.name}</strong><small>Poslovni prostor</small></span></div><nav aria-label="Glavna navigacija">{activeMenu.map((item) => <button key={item.id} className={`nav-item ${view === item.id ? "active" : ""}`} onClick={() => { setView(item.id); setSaved(""); }}>{item.icon}<span>{item.label}</span></button>)}</nav><div className="sidebar-bottom">{!simple && <PlansInfo placement="sidebar" />}<span className="pilot-badge">✦ Besplatan pilot</span><button className="signout" onClick={() => void supabaseBrowser().auth.signOut()}>Odjavi se ↗</button></div></aside>
-    <div className="main-column"><header className="topbar"><div><span className="breadcrumb">SHIFT FLOW / {workspace.name.toUpperCase()}</span><h1>{activeMenu.find((item) => item.id === view)?.label}</h1></div><div className="topbar-right"><span className="timezone">◷ {workspace.timezone}</span><ThemeToggle /><span className="user-avatar">{(user.email ?? user.phone ?? "U").slice(0, 1).toUpperCase()}</span></div></header><main className="page-content"><div className="page-head"><div><span className="eyebrow">{view === "schedule" ? "PREGLED" : "ODSUSTVA"}</span><p>{view === "schedule" ? "Generišite, uredite i objavite nedeljni raspored." : view === "availability" && simple ? "Unesite odsustvo za ceo dan ili deo dana." : view === "team" ? "Članovi tima i oznake poslova u smenama." : view === "availability" ? "Kada su članovi tima dostupni i kada nisu." : "Smene, potrebna pokrivenost i pravila rasporeda."}</p></div><div className="status" aria-live="polite">{busy ? "Čuvanje…" : saved}</div></div>
-      {error && <div className="notice error" role="alert">{error} <button onClick={refresh}>Pokušaj ponovo</button></div>}
-      {view === "schedule" && <SchedulePanel workspace={workspace} data={data} navigate={simple ? undefined : setView} />}
-      {!simple && view === "team" && <TeamPanel workspaceId={workspace.id} data={data} run={run} />}
-      {view === "availability" && <AvailabilityPanel workspaceId={workspace.id} data={data} run={run} exceptionsOnly={simple} />}
-      {!simple && view === "settings" && <SettingsPanel workspace={workspace} data={data} run={run} />}
-    </main></div><nav className="mobile-nav" aria-label="Mobilna navigacija">{activeMenu.map((item) => <button key={item.id} aria-current={view === item.id ? "page" : undefined} onClick={() => { setView(item.id); setSaved(""); }}><span>{item.icon}</span>{item.label}</button>)}</nav></div>;
+  if ((!workspace || workspace.owner_user_id !== user.id) && error) return <main className="setup-wrap"><div className="notice error" role="alert">{error} <Button onClick={refresh}>Pokušaj ponovo</Button></div></main>;
+  if (!workspace || workspace.owner_user_id !== user.id) return <WorkspaceCreate key={user.id} userId={user.id} onCreated={refresh} />;
+  return <div className="app-shell"><aside className="sidebar"><div className="brand">✳ ShiftFlow</div><div className="workspace-chip"><span className="workspace-icon">{workspace.name.slice(0, 1).toUpperCase()}</span><span><strong>{workspace.name}</strong><small>Poslovni prostor</small></span></div><nav aria-label="Glavna navigacija">{activeMenu.map((item) => <Button key={item.id} aria-current={view === item.id ? "page" : undefined} className={`nav-item ${view === item.id ? "active" : ""}`} onClick={() => { setView(item.id); setSaved(""); }}>{item.icon}<span>{item.label}</span></Button>)}</nav><div className="sidebar-bottom">{!simple && <PlansInfo placement="sidebar" />}<span className="pilot-badge">✦ Besplatan pilot</span><Button className="signout" onClick={() => void supabaseBrowser().auth.signOut()}>Odjavi se ↗</Button></div></aside>
+    <div className="main-column"><header className="topbar"><div><span className="breadcrumb">SHIFT FLOW / {workspace.name.toUpperCase()}</span><h1>{activeMenu.find((item) => item.id === view)?.label}</h1></div><div className="topbar-right"><span className="timezone">◷ {workspace.timezone}</span><ThemeToggle /><span className="user-avatar">{(user.email ?? user.phone ?? "U").slice(0, 1).toUpperCase()}</span></div></header><main className="page-content"><div className="page-head"><div><span className="eyebrow">{view === "schedule" ? "PREGLED" : view === "team" ? "TIM" : view === "settings" ? "PODEŠAVANJA" : "DOSTUPNOST"}</span><p>{view === "schedule" ? "Generišite, uredite i objavite nedeljni raspored." : view === "availability" && simple ? "Unesite odsustvo za ceo dan ili deo dana." : view === "team" ? "Članovi tima i oznake poslova u smenama." : view === "availability" ? "Kada su članovi tima dostupni i kada nisu." : "Smene, potrebna pokrivenost i pravila rasporeda."}</p></div><div className="status" aria-live="polite">{busy ? "Čuvanje…" : saved}</div></div>
+      {error && <div className="notice error" role="alert">{error} <Button onClick={refresh}>Pokušaj ponovo</Button></div>}
+      <div key={`${user.id}:${workspace.id}:schedule`} hidden={view !== "schedule"}><SchedulePanel workspace={workspace} data={data} navigate={simple ? undefined : setView} /></div>
+      <fieldset className="setup-fields" disabled={busy}>
+      {!simple && view === "team" && <TeamPanel key={`${user.id}:${workspace.id}`} workspaceId={workspace.id} data={data} run={run} />}
+      {view === "availability" && <AvailabilityPanel key={`${user.id}:${workspace.id}`} workspaceId={workspace.id} data={data} run={run} exceptionsOnly={simple} />}
+      {!simple && view === "settings" && <SettingsPanel key={`${user.id}:${workspace.id}`} workspace={workspace} data={data} run={run} />}
+    </fieldset></main></div><nav className="mobile-nav" aria-label="Mobilna navigacija">{activeMenu.map((item) => <Button key={item.id} aria-current={view === item.id ? "page" : undefined} onClick={() => { setView(item.id); setSaved(""); }}><span>{item.icon}</span>{item.label}</Button>)}</nav></div>;
 }

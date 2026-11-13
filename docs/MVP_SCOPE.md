@@ -1,5 +1,7 @@
 # Pilot scope and pricing
 
+> Current scheduling contract: [13 November rules and test evidence](SCHEDULE_RECOVERY_STATUS.md). Automatic fallback may override availability with warnings; other automatic limits stay mandatory. Roles are labels. This supersedes older qualification/absolute availability wording below.
+
 ## Product promise
 
 Managers enter who can work, who cannot work and when, required coverage, and rules. One Generate action should produce a usable week with no routine cleanup in supported feasible pilot scenarios. Manual edits handle real exceptions.

@@ -1,5 +1,7 @@
 # Invited pilot release runbook
 
+> 13 November update: [current scheduling rules, three additional migrations and real hosted test evidence](SCHEDULE_RECOVERY_STATUS.md). Availability is soft only in the automatic fallback; roles remain labels. Keep the eleven ordered migrations, including the HTTP 409 and RPC privilege repairs. Provider/launch settings remain outside this fix scope.
+
 Updated on 11 November 2026. The application is not deployed. The tester release remains blocked on Netlify access, the deferred Auth review, and live tests.
 
 ## Local startup

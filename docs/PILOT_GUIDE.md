@@ -13,7 +13,7 @@ Support/feedback route: reply to the pilot invitation using the template below. 
 
 1. Sign up with email OR phone number and a password. No confirmation email/SMS step is required during the pilot. Phone entry needs a country code.
 2. Set the business name, timezone, roles, shifts and staffing requirements.
-3. Add employees, target hours and shift preferences. Roles are job labels. Generate follows availability and work rules; a manager can override scheduling rules with a manual change.
+3. Add employees, target hours and shift preferences. Roles are job labels. Generate first follows availability; if needed, it fills using availability deviations with warnings while preserving overlap, rest and hour limits. A manager can still override scheduling rules with a manual change.
 4. Enter regular availability, then date-specific whole-day/partial-day unavailability.
 5. Select a week and click Generate. Check coverage, hours and any reported problems. A normal feasible week should not need manual cleanup.
 6. Mark an employee unavailable for a shift and use Replace or drag to make a change. Verify that the time/date stays the same.

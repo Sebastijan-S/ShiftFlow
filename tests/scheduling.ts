@@ -74,6 +74,7 @@ assert.equal(exhaustive(oracleInput,tiny,0,[]),true);
 assert.equal(generate(oracleInput,{maxNodes:100}).status,"complete");
 const impossible=structuredClone(oracleInput);
 impossible.setup.windows=impossible.setup.windows.filter((w)=>w.employee_id==="e0");
+impossible.setup.employees=impossible.setup.employees.filter((e)=>e.id==="e0");
 assert.equal(exhaustive(impossible,expandDemand(impossible),0,[]),false);
 const incomplete=generate(impossible,{maxNodes:5000});
 assert.equal(incomplete.status,"incomplete");
@@ -99,3 +100,60 @@ assert.throws(()=>expandDemand(spring),/multiple instants|no such instant|ambigu
 const autumn={...spring,weekStart:"2026-10-19"};
 assert.throws(()=>expandDemand(autumn),/multiple instants|no such instant|ambiguous/i);
 console.log("PASS: constraints, partial absence, swap, locks, cancel and reproducibility");
+
+// Availability is the only automatic constraint allowed to soften on the second pass.
+const fallback=fixture("service",10);
+fallback.setup.employees=fallback.setup.employees.slice(0,3);
+fallback.setup.requirements=fallback.setup.requirements.filter((r)=>r.weekday===1 && r.role_id==="front");
+fallback.setup.windows=fallback.setup.windows.filter((w)=>w.employee_id==="e0");
+// Both shifts can be covered, but the rest rule needs two people; at least one deviation.
+const softened=generate(fallback,{maxNodes:5000});
+assert.equal(softened.status,"complete");
+assert.equal(softened.generationMode,"availability_override");
+assert.equal(softened.deviations,1);
+assert.deepEqual(validateSchedule(fallback,softened.slots,true,true),[]);
+const minimumPenalty=(model:ScheduleInput,index=0,assigned:typeof tiny=[]):number=>{
+  const demand=expandDemand(model);
+  if(index===demand.length) return assigned.reduce((n,s)=>n+(violation(model,s,s.employeeId!,[])==="unavailable interval"?1:0),0);
+  return Math.min(Infinity,...model.setup.employees.filter((e)=>!violation(model,demand[index],e.id,assigned,undefined,true)).map((e)=>minimumPenalty(model,index+1,[...assigned,{...demand[index],employeeId:e.id}])));
+};
+assert.equal(softened.deviations,minimumPenalty(fallback),"fallback matches exhaustive minimum deviation oracle");
+const worseComplete=expandDemand(fallback).map((s,i)=>({...s,employeeId:`e${i+1}`}));
+assert.deepEqual(validateSchedule(fallback,worseComplete,true,true),[]);
+assert.equal(worseComplete.filter((s)=>violation(fallback,s,s.employeeId!,[])==="unavailable interval").length,2,"another valid complete solution has more deviations");
+const one=structuredClone(fallback);
+one.setup.employees=one.setup.employees.slice(0,1);
+one.setup.requirements=one.setup.requirements.slice(0,1);
+for(const variant of ["weekly","whole","partial"] as const) {
+  const model=structuredClone(one);
+  if(variant==="weekly") model.setup.windows=[];
+  else model.setup.exceptions=[{id:variant,workspace_id:"test",employee_id:"e0",local_date:"2026-11-09",start_time:variant==="whole"?null:"10:00:00",end_time:variant==="whole"?null:"11:00:00",reason:"PRIVATE"}];
+  const original=structuredClone(model.setup);
+  const result=generate(model,{maxNodes:100});
+  assert.equal(result.status,"complete",variant);
+  assert.equal(result.deviations,1,variant);
+  assert.equal(result.generationMode,"availability_override");
+  assert.deepEqual(model.setup,original,"generation preserves original availability and absences");
+  const lock={...result.slots[0],locked:true};
+  const lockedResult=generate({...model,existing:[lock]},{maxNodes:100});
+  assert.equal(lockedResult.status,"complete");
+  assert.equal(lockedResult.generationMode,"availability_override");
+  assert.deepEqual(lockedResult.slots,[lock]);
+}
+const strict=generate(one,{maxNodes:100});
+assert.equal(strict.deviations,0);assert.equal(strict.generationMode,"strict");
+const tooMany=structuredClone(fallback);tooMany.setup.employees=tooMany.setup.employees.slice(0,1);tooMany.setup.windows=[];
+assert.equal(generate(tooMany,{maxNodes:5000}).status,"incomplete","rest remains mandatory even with no availability");
+assert.equal(generate(tooMany,{maxNodes:1}).status,"limit");
+for(const kind of ["max_daily_hours","max_weekly_hours"] as const) {
+  const limited=structuredClone(one);limited.setup.windows=[];limited.setup.rules![kind]=1;
+  const result=generate(limited,{maxNodes:100});assert.equal(result.status,"incomplete");assert.match(result.issues[0].reason,/maksimum sati/);
+}
+const nightOverride=structuredClone(overnight);nightOverride.setup.employees=nightOverride.setup.employees.slice(0,1);nightOverride.setup.windows=[];nightOverride.adjacent=[];
+assert.equal(generate(nightOverride,{maxNodes:100}).status,"complete","overnight fallback covers both local dates");
+nightOverride.adjacent=[{...night,id:"adjacent",employeeId:"e0",start:night.start-8*3600000,end:night.start-2*3600000}];
+assert.equal(generate(nightOverride,{maxNodes:100}).status,"incomplete","adjacent rest still applies");
+const overlapOverride=structuredClone(one);overlapOverride.setup.windows=[];
+overlapOverride.setup.requirements[0].required_count=2;
+assert.equal(generate(overlapOverride,{maxNodes:100}).coverage,.5,"no duplicated simultaneous assignment");
+console.log("PASS: strict-first fallback, three absence types, exact tiny deviation oracle, locks, overnight, adjacent rest, hours, overlap and honest limits");

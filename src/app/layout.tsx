@@ -1,21 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Roboto_Slab, Public_Sans } from "next/font/google";
+import { Public_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
 const publicSansHeading = Public_Sans({subsets:['latin'],variable:'--font-heading'});
-
-const robotoSlab = Roboto_Slab({subsets:['latin'],variable:'--font-serif'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "ShiftFlow | Planiranje smena",
@@ -27,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="sr-Latn"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", "dark", geistSans.variable, geistMono.variable, robotoSlab.variable, publicSansHeading.variable)}
+      className={cn("h-full", "antialiased", "dark", publicSansHeading.variable)}
     >
       <head>
         <script dangerouslySetInnerHTML={{__html:"try{if(localStorage.getItem('shiftflow-theme')==='light'){document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}}catch{}"}} />

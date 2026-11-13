@@ -41,7 +41,8 @@ try {
   await db.exec(`set request.jwt.claim.sub = '${a}'`);
   assert.equal((await sql('select public.publish_schedule($1,$2,$3) as rev',[wa,'2026-11-09',1])).rows[0].rev,1);
   const token='a'.repeat(64);
-  await sql('select public.create_team_link($1,$2)',[wa,token]);
+  await sql('select public.rotate_team_link($1,$2)',[wa,token]);
+  await sql('select public.rotate_team_link($1,$2)',[wa,token]);
   await fail(() => sql('select public.create_team_link($1,$2)',[wa,'b'.repeat(64)]),/already exists/);
   assert.equal((await save(1,setupRevision,5,[{...slot,employee_id:null}])).rows[0].rev,2);
   await fail(() => sql('select public.publish_schedule($1,$2,$3)',[wa,'2026-11-09',2]),/Incomplete/);
@@ -60,7 +61,12 @@ try {
   await db.exec('set role authenticated');
   const nextToken='b'.repeat(64);
   await sql('select public.rotate_team_link($1,$2)',[wa,nextToken]);
+  await sql('select public.rotate_team_link($1,$2)',[wa,nextToken]);
+  await db.exec(`set request.jwt.claim.sub = '${b}'`);
+  await fail(() => sql('select public.rotate_team_link($1,$2)',[wa,'c'.repeat(64)]),/Forbidden/);
+  await db.exec(`set request.jwt.claim.sub = '${a}'`);
   await db.exec('set role anon');
+  await fail(() => sql('select public.rotate_team_link($1,$2)',[wa,'c'.repeat(64)]),/permission denied/);
   assert.equal((await sql('select public.read_team_week($1,$2) as result',[token,'2026-11-09'])).rows[0].result,null,'rotated token invalid');
   assert.ok((await sql('select public.read_team_week($1,$2) as result',[nextToken,'2026-11-09'])).rows[0].result,'stable publication through new token');
   await db.exec('set role authenticated');
@@ -77,7 +83,7 @@ try {
   await sql("insert into public.availability_windows(workspace_id,employee_id,weekday,start_time,end_time) values ($1,$2,0,'21:00','24:00'),($1,$2,1,'00:00','07:00')",[wa,employee]);
   newSetup=(await sql('select setup_revision from public.workspaces where id=$1',[wa])).rows[0].setup_revision;
   const priorSlot={id:`2026-11-08:${priorDemand}:0`,local_date:'2026-11-08',role_id:role,shift_id:nightShift,position:0,employee_id:employee,locked:false};
-  await fail(() => sql('select public.save_schedule($1,$2,$3,$4,$5,$6,$7::jsonb)',[wa,'2026-11-02',0,newSetup,op(8),'generate',JSON.stringify([priorSlot])]),/minimum rest|Overlap|Daily hour/i);
+  for (const mode of ['generate','generate_availability_override']) await fail(() => sql('select public.save_schedule($1,$2,$3,$4,$5,$6,$7::jsonb)',[wa,'2026-11-02',0,newSetup,op(8),mode,JSON.stringify([priorSlot])]),/minimum rest|Overlap|Daily hour/i);
   assert.equal((await sql("select count(*)::int as n from public.schedule_weeks where workspace_id=$1 and week_start='2026-11-02'",[wa])).rows[0].n,0,'failed adjacent write rolls back whole week');
   await db.exec('reset role');
   const dstWeek=(await sql("insert into public.schedule_weeks(workspace_id,week_start) values ($1,'2026-10-19') returning id",[wa])).rows[0].id;

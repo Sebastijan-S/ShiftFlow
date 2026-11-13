@@ -1,5 +1,7 @@
 # Database-first technical plan
 
+> Current scheduling rules and verified fixes: [13 November status](SCHEDULE_RECOVERY_STATUS.md). Availability may be overridden only in the automatic fallback; overlap, rest, hours, active tenant employees, locks and exact demand remain mandatory. Roles are labels; manual override semantics remain as agreed. This newer decision supersedes conflicting planning text below.
+
 ## Phase 1 implementation note (9 November 2026)
 
 The normalized setup subset is now implemented by migrations `20261109223308_phase1_foundation.sql`, `20261109223647_phase1_foreign_key_indexes.sql`, and `20261109224326_phase1_protect_staffing_references.sql` in project `srpvabzbekenbuxxrbvr`. Each pilot account owns one workspace, enforced by `workspaces.owner_user_id unique`; an insert trigger atomically creates the owner membership and default scheduling rules. All ten public tables have RLS. Tenant-owned child tables use workspace-scoped foreign keys; anonymous callers have no application table grants. Phase 2 schedule, publication, audit, and share tables are intentionally not present yet. Browser access uses a publishable key and generated database types.
@@ -39,7 +41,7 @@ Authenticated scheduling uses PostgreSQL as its source of truth. Local pending c
 
 Use immutable IDs, UTC audit timestamps, explicit local calendar dates, and workspace timezone. Store assignment instants or an equally unambiguous interval representation; pin assigned times so editing a future template does not rewrite historical shifts. Test DST ambiguous/nonexistent times and overnight intervals. Interval comparisons use half-open [start,end) semantics; a shift ending at an absence start is allowed.
 
-Normalize weekly availability and exceptions into allowed intervals before scheduling. A shift must fit the whole allowed period; checking only its start is insufficient. Date exceptions can remove part/all of a recurring window. Changing availability must flag conflicting draft assignments rather than silently deleting them.
+Normalize weekly availability and exceptions into allowed intervals before scheduling. The strict first pass requires the whole shift to fit; the automatic fallback may violate availability with warnings while preserving every other automatic constraint. Date exceptions can remove part/all of a recurring window. Changing availability must flag conflicting draft assignments rather than silently deleting them.
 
 All tenant-owned foreign keys include workspace identity or enforce the equivalent relational invariant. Employee eligibility and temporal constraints require trusted transactional validation as well as UI feedback. Index common workspace/week and employee/interval queries, membership lookups, and token hashes. Add uniqueness and check constraints where they express the invariant directly.
 

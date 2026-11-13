@@ -11,7 +11,7 @@ Implement only the requested phase. Continue autonomously through routine implem
 ## Product rules
 
 - Scheduling quality is central. Never call a simplistic partially filled result complete.
-- Never violate hard availability, role, overlap, rest, or hour constraints to fill a schedule.
+- Automatic generation first respects availability; if coverage is incomplete, it may override weekly availability and whole/partial absences with explicit warnings. Prefer fewer deviations at equal coverage. Active tenant employees, overlap, rest, hour limits, locks and exact demand remain mandatory. Roles are labels. See [current rules](docs/SCHEDULE_RECOVERY_STATUS.md). Manual override semantics remain unchanged.
 - Distinguish infeasibility from a search timeout; do not pretend either is a valid complete schedule.
 - Preserve date/time when replacing an employee. A two-way swap validates both assignments and commits atomically.
 - Treat database integrity and tenant isolation as essential, tested behavior.
@@ -28,3 +28,8 @@ Keep domain scheduling logic separate from UI and database access. Build cohesiv
 Use Google Chrome explicitly for previews and browser tests; never Brave. Maintain a concise implementation status and test evidence as work proceeds. Do not mark unchecked work complete.
 
 Reinspect the intended Supabase project before each migration. Use isolated fixtures/test environments for destructive checks. Database migrations, auth settings, Git publication, and live deployment must stay within the user's current authorization. Reuse existing authorization; do not introduce repetitive approval gates for routine local work.
+
+## Learnings
+
+- RPC business conflicts use SQLSTATE `PT409` (HTTP 409), never custom `40001`/`40P01`: PostgREST 14 retries serialization failures, potentially indefinitely. Verify stale revisions through the real Data API as well as isolated SQL. See [Supabase guidance](https://supabase.com/kb/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b).
+- Supabase hosted default grants can differ from a clean migration replay. Verify actual table grants and policies; RPC-managed schedule tables need only owner-scoped SELECT for authenticated users, no direct writes or TRUNCATE. Do not weaken RLS to resolve a test failure.

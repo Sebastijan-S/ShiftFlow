@@ -19,7 +19,7 @@ export async function loadWeek(workspaceId: string, weekStart: string): Promise<
   const result = await db.from("assignments").select("week_id,slot_key,local_date,role_id,shift_template_id,starts_at,ends_at,employee_id,locked,cancelled").eq("workspace_id",workspaceId).in("week_id",ids);
   if (result.error) throw result.error;
   const current = weeks.data?.find((w) => w.week_start === weekStart);
-  const mapped = (result.data ?? []).map((row) => ({ id: row.slot_key, localDate: row.local_date, roleId: row.role_id, shiftId: row.shift_template_id, start: Date.parse(row.starts_at), end: Date.parse(row.ends_at), employeeId: row.employee_id, locked: row.locked, cancelled: row.cancelled, weekId: row.week_id }));
+  const mapped = (result.data ?? []).map((row) => ({ id: row.slot_key, localDate: row.local_date, roleId: row.role_id, shiftId: row.shift_template_id, start: Date.parse(row.starts_at), end: Date.parse(row.ends_at), employeeId: row.employee_id, locked: row.locked, cancelled: row.cancelled, weekId: row.week_id })).sort((a,b)=>a.start-b.start || a.id.localeCompare(b.id));
   return { slots: mapped.filter((s) => s.weekId === current?.id), adjacent: mapped.filter((s) => s.weekId !== current?.id), revision: current?.revision ?? 0, publishedRevision: current?.published_revision ?? null };
 }
 

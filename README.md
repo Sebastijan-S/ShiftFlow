@@ -1,5 +1,7 @@
 # NewShiftFlow — pilot application
 
+Current scheduling fixes and availability fallback: [13 November status and manual checks](docs/SCHEDULE_RECOVERY_STATUS.md). Three forward migrations are applied to the test project; no Git push or deployment was performed for this change.
+
 Status: Phase 2 code and hosted schema implemented; the Phase 2 acceptance gate remains open pending real Auth and hosted manager round trips. The user deferred provider settings and signup verification until final review. Updated 10 November 2026.
 
 ## Local development

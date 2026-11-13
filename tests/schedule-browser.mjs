@@ -56,6 +56,7 @@ try {
   const before=savedSlots.map((s)=>({id:s.id,local_date:s.local_date,role_id:s.role_id,shift_id:s.shift_id}));
   const original=savedSlots[0].employee_id;
   const target=savedSlots[0].employee_id===employees[2].id?employees[1]:employees[2];
+  await page.getByRole('button',{name:'Opcije',exact:true}).first().click();
   await page.getByLabel('Zameni').first().selectOption(target.id);
   await page.getByText('Sačuvana revizija 2').waitFor({timeout:10000});
   assert.deepEqual(savedSlots.map((s)=>({id:s.id,local_date:s.local_date,role_id:s.role_id,shift_id:s.shift_id})),before,'replacement preserves slot');
@@ -65,12 +66,13 @@ try {
   await page.getByText('Sačuvana revizija 4').waitFor({timeout:10000});
   assert.deepEqual(operations.slice(-2).map((op)=>op.p_expected_revision),[2,3],'rapid edits serialize expected revisions');
   assert.equal(savedSlots[0].employee_id,target.id);
+  await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Objavi ažuriranje'}).click();
   await page.getByText('Objavljena revizija 4').waitFor();
   await page.screenshot({path:'test-results/schedule-fixture-1440.png',fullPage:true});
   await page.emulateMedia({media:'print'});
   assert.equal(await page.locator('.sidebar').evaluate((el)=>getComputedStyle(el).display),'none');
-  assert.equal(await page.locator('.shift-controls').first().evaluate((el)=>getComputedStyle(el).display),'none');
+  assert.equal(await page.locator('.slot-options-trigger').first().evaluate((el)=>getComputedStyle(el).display),'none');
   await page.screenshot({path:'test-results/schedule-print-fixture.png',fullPage:true});
   await page.emulateMedia({media:'screen'});
   await page.setViewportSize({width:390,height:844});
@@ -81,6 +83,7 @@ try {
   await page.getByText('Sačuvana revizija 5').waitFor();
   assert.equal(operations.at(-1).p_expected_revision,4);
   assert.equal(operations.at(-1).p_operation,'undo');
+  await page.getByRole('button',{name:'Opcije',exact:true}).first().click();
   await page.getByRole('button',{name:'Ukloni smenu'}).first().focus();
   await page.keyboard.press('Enter');
   await page.getByText('Sačuvana revizija 6').waitFor();
@@ -127,8 +130,10 @@ try {
   await page.screenshot({path:'test-results/team-dark-fixture-390.png',fullPage:true});
   await page.setViewportSize({width:1440,height:900});
   await page.getByRole('navigation',{name:'Glavna navigacija'}).getByRole('button',{name:'Raspored'}).click();
+  await page.getByRole('button',{name:'Opcije',exact:true}).first().click();
   await page.getByLabel('Zameni').first().selectOption(employees[3].id);
-  await page.getByText('Sačuvana revizija 8').waitFor();
+  await page.getByText(/Sačuvana revizija 8/).waitFor();
+  await page.keyboard.press('Escape');
   assert.equal(savedSlots[0].employee_id,employees[3].id,'manual change can select an inactive employee');
   await page.getByRole('button',{name:'Objavi ažuriranje'}).click();
   await page.getByText('Objavljena revizija 8').waitFor();
